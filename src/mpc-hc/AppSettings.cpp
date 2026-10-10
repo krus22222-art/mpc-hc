@@ -132,7 +132,7 @@ CAppSettings::CAppSettings()
     , nToolbarType(INTERNAL_TOOLBAR)
     , strToolbarName(L"")
     , nToolbarAlignment(0)
-    , eAfterPlayback(AfterPlayback::DO_NOTHING)
+    , eAfterPlayback(AfterPlayback::PLAY_NEXT)
     , fUseDVDPath(false)
     , idMenuLang(0)
     , idAudioLang(0)
@@ -1735,7 +1735,8 @@ void CAppSettings::LoadSettings()
     nAutoFitFactorMin = std::max(std::min(nAutoFitFactorMin, nAutoFitFactorMax), MIN_AUTOFIT_SCALE_FACTOR);
     nAutoFitFactorMax = std::min(std::max(nAutoFitFactorMin, nAutoFitFactorMax), MAX_AUTOFIT_SCALE_FACTOR);
 
-    eAfterPlayback = static_cast<AfterPlayback>(pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_AFTER_PLAYBACK, 0));
+    // series-player: a single opened episode continues with the next file of its folder
+    eAfterPlayback = static_cast<AfterPlayback>(pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_AFTER_PLAYBACK, static_cast<int>(AfterPlayback::PLAY_NEXT)));
 
     bHideFullscreenControls = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_HIDE_FULLSCREEN_CONTROLS, TRUE);
     eHideFullscreenControlsPolicy =
