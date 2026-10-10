@@ -34,7 +34,7 @@ Set-Content (Join-Path $stage 'mpc-hc64.ini') -Value '' -Encoding Unicode
 
 # Licence + docs
 Copy-Item (Join-Path $root 'COPYING.txt'), (Join-Path $root 'docs\Authors.txt') $stage
-Copy-Item (Join-Path $PSScriptRoot 'Інструкція.txt') $stage
+Copy-Item (Join-Path $PSScriptRoot 'Інструкція.txt'), (Join-Path $PSScriptRoot 'install.ps1'), (Join-Path $PSScriptRoot 'uninstall.ps1') $stage
 
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
