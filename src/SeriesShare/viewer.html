@@ -86,12 +86,23 @@ async function connect() {
   }
 }
 
-go.onclick = () => { v.muted = false; v.play(); overlay.classList.add("hidden"); updateSoundButton(); };
+// Keep the tablet screen on while watching (Android/Chrome, Safari 16.4+).
+let wakeLock = null;
+async function keepAwake() {
+  try { if ("wakeLock" in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); } } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && pc && pc.connectionState === "connected") keepAwake(); });
+v.addEventListener("playing", keepAwake);
+
+go.onclick = () => { v.muted = false; v.play(); overlay.classList.add("hidden"); updateSoundButton(); keepAwake(); };
 sndBtn.onclick = () => { v.muted = !v.muted; if (!v.muted) v.play(); updateSoundButton(); };
 fsBtn.onclick = () => {
   const el = document.documentElement;
-  if (document.fullscreenElement) document.exitFullscreen();
-  else if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  if (document.fullscreenElement) { document.exitFullscreen(); try { screen.orientation.unlock(); } catch (e) {} }
+  else if (el.requestFullscreen) el.requestFullscreen().then(() => {
+    // Android: turn the picture landscape in fullscreen (ignored where unsupported)
+    if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(() => {});
+  }).catch(() => {});
   else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iPhone/iPad Safari
 };
 connect();
