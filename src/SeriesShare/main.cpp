@@ -14,6 +14,7 @@
 
 #include "AudioCapture.h"
 #include "HttpServer.h"
+#include "RelayClient.h"
 #include "Streamer.h"
 #include "VideoCapture.h"
 #include "viewer_html.h"
@@ -35,6 +36,9 @@ struct App {
     int64_t clockStart = 0;
 
     std::unique_ptr<Streamer> streamer;
+    std::unique_ptr<RelayClient> relay;
+    std::string relayBase = "https://mpc-share.nashe-kino.workers.dev";
+    bool useRelay = true;
     VideoCapture video;
     AudioCapture audio;
     HttpServer http;
@@ -69,6 +73,10 @@ void ParseArgs()
         else if (a == L"--view") g.view = reinterpret_cast<HWND>(static_cast<uintptr_t>(wcstoull(argv[++i], nullptr, 0)));
         else if (a == L"--pid") g.pid = DWORD(wcstoul(argv[++i], nullptr, 0));
         else if (a == L"--port") g.port = uint16_t(wcstoul(argv[++i], nullptr, 0));
+        else if (a == L"--relay") { std::wstring r = argv[++i]; g.relayBase.assign(r.begin(), r.end()); }
+    }
+    for (int i = 1; i < argc; i++) {
+        if (std::wstring(argv[i]) == L"--local") g.useRelay = false;
     }
     LocalFree(argv);
     if (!g.player || !IsWindow(g.player)) {
@@ -123,7 +131,12 @@ void UpdateStats()
     swprintf_s(buf, L"Глядачів: %d   ·   Відео: %d×%d, %.0f кадр/с   ·   Звук: %s   ·   Передано: %s", viewers, g.video.Width(), g.video.Height(),
                g.video.CurrentFps(), g.audioOk ? L"так" : L"ні", FormatBytes(g.streamer->BytesSent()).c_str());
     SetText(IDC_STATS, buf);
-    SetText(IDC_STATUS, viewers > 0 ? L"● Трансляція йде — глядач підключений" : L"● Трансляція запущена — чекаємо на глядача");
+    if (g.relay && !g.relay->Connected()) {
+        const std::string err = g.relay->LastError();
+        SetText(IDC_STATUS, err.empty() ? L"○ Підключення до сервера…" : L"○ Немає зв'язку з сервером, повторюю… (" + Widen(err) + L")");
+    } else {
+        SetText(IDC_STATUS, viewers > 0 ? L"● Трансляція йде — глядач підключений" : L"● Трансляція запущена — чекаємо на глядача");
+    }
     if (g.video.WindowClosed() || (g.player && !IsWindow(g.player))) {
         DestroyWindow(g.wnd);  // the player was closed
     }
@@ -197,7 +210,7 @@ HWND CreateUi(HINSTANCE inst)
         return c;
     };
     add(L"STATIC", L"", 0, 16, 12, 528, 22, IDC_STATUS, g.bold);
-    add(L"STATIC", L"Посилання для глядача (відкрити в браузері на планшеті чи телефоні):", 0, 16, 42, 528, 20, IDC_CAPTION, g.font);
+    add(L"STATIC", L"Посилання для глядача (надішліть його — відкривається в браузері на планшеті чи телефоні):", 0, 16, 42, 528, 20, IDC_CAPTION, g.font);
     add(L"EDIT", g.url.c_str(), WS_BORDER | ES_READONLY | ES_AUTOHSCROLL, 16, 64, 528, 26, IDC_LINK, g.font);
     add(L"BUTTON", L"Копіювати посилання", BS_DEFPUSHBUTTON | WS_TABSTOP, 16, 102, 170, 32, IDC_COPY, g.font);
     add(L"BUTTON", L"Відкрити", WS_TABSTOP, 194, 102, 110, 32, IDC_OPEN, g.font);
@@ -234,6 +247,12 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show)
         return 1;
     }
     g.url = L"http://127.0.0.1:" + std::to_wstring(g.port) + L"/";
+    if (g.useRelay) {
+        auto id = ShareIdentity::LoadOrCreate(g.relayBase);
+        g.relay = std::make_unique<RelayClient>(*g.streamer, id.relay, id.room, id.key);
+        g.relay->Start();
+        g.url = Widen(g.relay->ViewerUrl());
+    }
 
     std::wstring error;
     VideoSettings vs;
@@ -261,6 +280,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show)
         }
     }
 
+    if (g.relay) g.relay->Stop();
     g.http.Stop();
     g.audio.Stop();
     g.video.Stop();

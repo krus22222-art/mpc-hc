@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.21)
 project(SeriesShare LANGUAGES CXX)
 
 # Dependencies come from vcpkg (triplet x64-windows-static), see BUILD.md:
@@ -29,6 +29,7 @@ add_executable(mpc-share WIN32
     AudioCapture.cpp
     Streamer.cpp
     HttpServer.cpp
+    RelayClient.cpp
     mpc-share.rc
     mpc-share.manifest
 )
@@ -41,5 +42,5 @@ target_link_libraries(mpc-share PRIVATE
     yuv
     nlohmann_json::nlohmann_json
     d3d11 dxgi dwmapi ws2_32 mmdevapi ole32 oleaut32 windowsapp comctl32 shlwapi shell32
-    mfplat mfuuid wmcodecdspuuid strmiids
+    mfplat mfuuid wmcodecdspuuid strmiids crypt32 bcrypt
 )

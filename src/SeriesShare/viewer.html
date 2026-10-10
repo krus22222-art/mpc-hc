@@ -39,7 +39,7 @@ const v = document.getElementById("v"), overlay = document.getElementById("overl
 // Signaling endpoint: same origin by default (local test), or ?api=https://... (relay server)
 const params = new URLSearchParams(location.search);
 const api = (params.get("api") || "").replace(/\/$/, "");
-const room = params.get("room") || "";
+const room = params.get("room") || (location.pathname.match(/\/r\/([a-z0-9]+)/) || [])[1] || "";
 const ICE = [{ urls: "stun:stun.cloudflare.com:3478" }, { urls: "stun:stun.l.google.com:19302" }];
 
 function show(text, spinning, button) {
