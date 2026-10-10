@@ -1579,6 +1579,7 @@ BEGIN
         MENUITEM "Open &DVD/BD...",             ID_FILE_OPENDVDBD
         MENUITEM "Open De&vice...",             ID_FILE_OPENDEVICE
         MENUITEM "Open Dir&ectory...",          ID_FILE_OPENDIRECTORY
+        MENUITEM "Shared &Viewing...",           ID_FILE_SHARE
         MENUITEM "O&pen Disc",                  ID_FILE_OPENDISC
         MENUITEM "Recent &Files",               ID_RECENT_FILES
         MENUITEM "&Close",                      ID_FILE_CLOSE_AND_RESTORE
@@ -1857,6 +1858,7 @@ BEGIN
             MENUITEM "Open &DVD/BD...",             ID_FILE_OPENDVDBD
             MENUITEM "Open De&vice...",             ID_FILE_OPENDEVICE
             MENUITEM "Open Dir&ectory...",          ID_FILE_OPENDIRECTORY
+            MENUITEM "Shared &Viewing...",           ID_FILE_SHARE
             MENUITEM "O&pen Disc",                  ID_FILE_OPENDISC
             MENUITEM "Recent &Files",               ID_RECENT_FILES
             MENUITEM "&Close",                      ID_FILE_CLOSE_AND_RESTORE
@@ -2124,6 +2126,7 @@ BEGIN
             MENUITEM "Open &DVD/BD...",             ID_FILE_OPENDVDBD
             MENUITEM "Open De&vice...",             ID_FILE_OPENDEVICE
             MENUITEM "Open Dir&ectory...",          ID_FILE_OPENDIRECTORY
+            MENUITEM "Shared &Viewing...",           ID_FILE_SHARE
             MENUITEM "O&pen Disc",                  ID_FILE_OPENDISC
             MENUITEM "Recent &Files",               ID_RECENT_FILES
             MENUITEM "&Close",                      ID_FILE_CLOSE_AND_RESTORE

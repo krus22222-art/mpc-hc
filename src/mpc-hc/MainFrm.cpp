@@ -651,6 +651,8 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 
     // Open Dir incl. SubDir
     ON_COMMAND(ID_FILE_OPENDIRECTORY, OnFileOpendirectory)
+    ON_COMMAND(ID_FILE_SHARE, OnFileShare)
+    ON_UPDATE_COMMAND_UI(ID_FILE_SHARE, OnUpdateFileShare)
     ON_UPDATE_COMMAND_UI(ID_FILE_OPENDIRECTORY, OnUpdateFileOpen)
     ON_WM_POWERBROADCAST()
 
@@ -23546,6 +23548,60 @@ void CMainFrame::OnFileOpendirectory()
 
     m_wndPlaylistBar.Open(sl, true);
     PostMessage(WM_MPC_OPENCURPLAYLIST, 0, 0);
+}
+
+// series-player: "Shared viewing" streams the video area and the player's audio to a browser.
+// The work is done by mpc-share.exe next to the player, so a streaming problem never affects playback.
+void CMainFrame::OnFileShare()
+{
+    if (m_hShareProcess && WaitForSingleObject(m_hShareProcess, 0) == WAIT_TIMEOUT) {
+        // already running: bring its window to the front
+        DWORD pid = GetProcessId(m_hShareProcess);
+        struct Finder { DWORD pid; HWND hwnd; } f{ pid, nullptr };
+        EnumWindows([](HWND hwnd, LPARAM lp) -> BOOL {
+            auto* f = reinterpret_cast<Finder*>(lp);
+            DWORD p = 0;
+            GetWindowThreadProcessId(hwnd, &p);
+            if (p == f->pid && ::IsWindowVisible(hwnd)) {
+                f->hwnd = hwnd;
+                return FALSE;
+            }
+            return TRUE;
+        }, reinterpret_cast<LPARAM>(&f));
+        if (f.hwnd) {
+            ::ShowWindow(f.hwnd, SW_RESTORE);
+            ::SetForegroundWindow(f.hwnd);
+        }
+        return;
+    }
+    if (m_hShareProcess) {
+        CloseHandle(m_hShareProcess);
+        m_hShareProcess = nullptr;
+    }
+
+    CString exe = PathUtils::CombinePaths(PathUtils::GetProgramPath(), _T("mpc-share.exe"));
+    if (!PathUtils::Exists(exe)) {
+        AfxMessageBox(L"mpc-share.exe \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u043F\u043E\u0440\u0443\u0447 \u0456\u0437 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043E\u044E. \u041F\u0435\u0440\u0435\u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0456\u0442\u044C \u043F\u043B\u0435\u0454\u0440.", MB_ICONWARNING | MB_OK);
+        return;
+    }
+    CString cmd;
+    cmd.Format(_T("\"%s\" --hwnd 0x%IX --view 0x%IX --pid %lu"), exe.GetString(),
+               reinterpret_cast<UINT_PTR>(m_hWnd), reinterpret_cast<UINT_PTR>(m_wndView.m_hWnd), GetCurrentProcessId());
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi = {};
+    if (CreateProcess(nullptr, cmd.GetBuffer(), nullptr, nullptr, FALSE, 0, nullptr, PathUtils::GetProgramPath(), &si, &pi)) {
+        CloseHandle(pi.hThread);
+        m_hShareProcess = pi.hProcess;
+    } else {
+        AfxMessageBox(L"\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0438 \u0441\u043F\u0456\u043B\u044C\u043D\u0438\u0439 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434.", MB_ICONERROR | MB_OK);
+    }
+    cmd.ReleaseBuffer();
+}
+
+void CMainFrame::OnUpdateFileShare(CCmdUI* pCmdUI)
+{
+    const bool running = m_hShareProcess && WaitForSingleObject(m_hShareProcess, 0) == WAIT_TIMEOUT;
+    pCmdUI->SetCheck(running);
 }
 
 HRESULT CMainFrame::CreateThumbnailToolbar()

@@ -42,6 +42,10 @@ msgctxt "ID_FILE_OPENDIRECTORY"
 msgid "Open Dir&ectory..."
 msgstr "Адкрыць &папку..."
 
+msgctxt "ID_FILE_SHARE"
+msgid "Shared &Viewing..."
+msgstr ""
+
 msgctxt "ID_FILE_OPENDISC"
 msgid "O&pen Disc"
 msgstr "Адкрыць &дыск"

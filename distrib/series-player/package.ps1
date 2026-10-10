@@ -21,6 +21,8 @@ New-Item -ItemType Directory $stage | Out-Null
 
 # Program, translations, internal LAV Filters (no debug symbols / link artefacts)
 Copy-Item $exe, (Join-Path $bin 'mpciconlib.dll') $stage
+# Shared viewing helper (built by src\SeriesShare\build-share.ps1)
+if (Test-Path (Join-Path $bin 'mpc-share.exe')) { Copy-Item (Join-Path $bin 'mpc-share.exe') $stage } else { Write-Warning 'mpc-share.exe not built: package without shared viewing' }
 Copy-Item (Join-Path $bin 'Lang') (Join-Path $stage 'Lang') -Recurse
 New-Item -ItemType Directory (Join-Path $stage 'LAVFilters64') | Out-Null
 Get-ChildItem (Join-Path $bin 'LAVFilters64') -File | Where-Object { $_.Extension -in '.dll', '.ax', '.manifest' } |

@@ -1437,6 +1437,9 @@ public:
     void        SendAudioTracksToApi();
     void        SendPlaylistToApi();
     afx_msg void OnFileOpendirectory();
+    afx_msg void OnFileShare();
+    afx_msg void OnUpdateFileShare(CCmdUI* pCmdUI);
+    HANDLE m_hShareProcess = nullptr; // series-player: shared viewing helper (mpc-share.exe)
 
     void        SendCurrentPositionToApi(bool fNotifySeek = false);
     void        SendCurrentVolumeToApi(bool force = false);

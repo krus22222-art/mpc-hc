@@ -43,6 +43,10 @@ msgctxt "ID_FILE_OPENDIRECTORY"
 msgid "Open Dir&ectory..."
 msgstr "開啟目錄(&E)…"
 
+msgctxt "ID_FILE_SHARE"
+msgid "Shared &Viewing..."
+msgstr ""
+
 msgctxt "ID_FILE_OPENDISC"
 msgid "O&pen Disc"
 msgstr "開啟光碟(&P)"

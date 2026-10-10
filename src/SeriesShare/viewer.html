@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Спільний перегляд</title>
+<style>
+  :root { color-scheme: dark; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: #000; color: #eee; font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; background: rgba(0,0,0,.55); }
+  #overlay.hidden { display: none; }
+  #status { font-size: 18px; max-width: 520px; }
+  button { font: inherit; font-size: 20px; padding: 16px 30px; border-radius: 14px; border: 0; background: #4c8dff; color: #fff; cursor: pointer; }
+  #bar { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 10px; opacity: .85; }
+  #bar button { font-size: 15px; padding: 10px 16px; background: rgba(40,40,48,.85); }
+  .spin { width: 42px; height: 42px; border: 4px solid #555; border-top-color: #4c8dff; border-radius: 50%; animation: s 1s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<video id="v" playsinline autoplay muted></video>
+<div id="overlay">
+  <div class="spin" id="spin"></div>
+  <div id="status">Підключення до трансляції…</div>
+  <button id="go" hidden>▶ Дивитися зі звуком</button>
+</div>
+<div id="bar" hidden>
+  <button id="fs">⛶ На весь екран</button>
+  <button id="snd">🔇 Увімкнути звук</button>
+</div>
+<script>
+"use strict";
+const v = document.getElementById("v"), overlay = document.getElementById("overlay"), statusEl = document.getElementById("status"),
+      go = document.getElementById("go"), spin = document.getElementById("spin"), bar = document.getElementById("bar"),
+      fsBtn = document.getElementById("fs"), sndBtn = document.getElementById("snd");
+// Signaling endpoint: same origin by default (local test), or ?api=https://... (relay server)
+const params = new URLSearchParams(location.search);
+const api = (params.get("api") || "").replace(/\/$/, "");
+const room = params.get("room") || "";
+const ICE = [{ urls: "stun:stun.cloudflare.com:3478" }, { urls: "stun:stun.l.google.com:19302" }];
+
+function show(text, spinning, button) {
+  overlay.classList.remove("hidden"); statusEl.textContent = text;
+  spin.hidden = !spinning; go.hidden = !button;
+}
+function updateSoundButton() { sndBtn.textContent = v.muted ? "🔇 Увімкнути звук" : "🔊 Вимкнути звук"; }
+
+async function waitIce(pc) {
+  if (pc.iceGatheringState === "complete") return;
+  await new Promise(r => { const t = setTimeout(r, 3000);
+    pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") { clearTimeout(t); r(); } }); });
+}
+
+let pc = null, retryTimer = null;
+async function connect() {
+  clearTimeout(retryTimer);
+  if (pc) { try { pc.close(); } catch (e) {} }
+  show("Підключення до трансляції…", true, false);
+  try {
+    const q = room ? "?room=" + encodeURIComponent(room) : "";
+    const r = await fetch(api + "/offer" + q, { method: "POST", cache: "no-store" });
+    if (r.status === 404 || r.status === 410) { show("Трансляцію ще не запущено або вже завершено. Сторінка оновиться сама.", true, false); retryTimer = setTimeout(connect, 4000); return; }
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const { id, sdp } = await r.json();
+    pc = new RTCPeerConnection({ iceServers: ICE });
+    const stream = new MediaStream();
+    v.srcObject = stream;
+    pc.ontrack = e => { stream.addTrack(e.track); };
+    pc.onconnectionstatechange = () => {
+      const s = pc.connectionState;
+      if (s === "connected") { overlay.classList.add("hidden"); bar.hidden = false; v.play().catch(() => {}); if (v.muted) show("Трансляція йде. Торкніться, щоб увімкнути звук.", false, true); }
+      if (s === "failed" || s === "disconnected" || s === "closed") { bar.hidden = true; show("З'єднання втрачено. Повторне підключення…", true, false); retryTimer = setTimeout(connect, 2500); }
+    };
+    await pc.setRemoteDescription({ type: "offer", sdp });
+    await pc.setLocalDescription(await pc.createAnswer());
+    await waitIce(pc);
+    const a = await fetch(api + "/answer?id=" + encodeURIComponent(id) + (room ? "&room=" + encodeURIComponent(room) : ""),
+                          { method: "POST", cache: "no-store", headers: { "Content-Type": "application/sdp" }, body: pc.localDescription.sdp });
+    if (!a.ok) throw new Error("HTTP " + a.status);
+  } catch (e) {
+    show("Не вдалося підключитися (" + e.message + "). Повтор через кілька секунд…", true, false);
+    retryTimer = setTimeout(connect, 4000);
+  }
+}
+
+go.onclick = () => { v.muted = false; v.play(); overlay.classList.add("hidden"); updateSoundButton(); };
+sndBtn.onclick = () => { v.muted = !v.muted; if (!v.muted) v.play(); updateSoundButton(); };
+fsBtn.onclick = () => {
+  const el = document.documentElement;
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iPhone/iPad Safari
+};
+connect();
+</script>
+</body>
+</html>
