@@ -83,8 +83,8 @@ CAppSettings::CAppSettings()
     , bRememberExternalPlaylistPos(true)
     , bRememberTrackSelection(true)
     , bRememberPlaylistItems(true)
-    , fRememberWindowPos(false)
-    , fRememberWindowSize(false)
+    , fRememberWindowPos(true)
+    , fRememberWindowSize(true)
     , rcLastWindowPos(CRect(100, 100, 500, 400))
     , fSavePnSZoom(false)
     , dZoomX(1.0)
@@ -1849,8 +1849,9 @@ void CAppSettings::LoadSettings()
 
     fExitFullScreenAtTheEnd = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_EXITFULLSCREENATTHEEND, TRUE);
 
-    fRememberWindowPos = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_REMEMBERWINDOWPOS, FALSE);
-    fRememberWindowSize = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_REMEMBERWINDOWSIZE, FALSE);
+    // series-player: the window opens where and as large as the user left it
+    fRememberWindowPos = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_REMEMBERWINDOWPOS, TRUE);
+    fRememberWindowSize = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_REMEMBERWINDOWSIZE, TRUE);
     str = pApp->GetProfileString(IDS_R_SETTINGS, IDS_RS_PANSCANZOOM);
     if (_stscanf_s(str, _T("%lf,%lf"), &dZoomX, &dZoomY) == 2 &&
             dZoomX >= 0.196 && dZoomX <= 5.0 &&

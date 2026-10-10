@@ -156,7 +156,7 @@ msgstr "&Звичайна"
 
 msgctxt "ID_VIEW_PRESETS_CUSTOM"
 msgid "C&ustom"
-msgstr ""
+msgstr "&Власний"
 
 msgctxt "ID_VIEW_FULLSCREEN"
 msgid "F&ull Screen"
@@ -608,7 +608,7 @@ msgstr "1.50 x"
 
 msgctxt "ID_PLAY_PLAYBACKRATE_175"
 msgid "1.75 x"
-msgstr ""
+msgstr "1.75 x"
 
 msgctxt "ID_PLAY_PLAYBACKRATE_200"
 msgid "2.00 x"
@@ -632,7 +632,7 @@ msgstr "8.00 x"
 
 msgctxt "ID_PLAY_PLAYBACKRATE_FPS23"
 msgid "23.976 fps"
-msgstr ""
+msgstr "23.976 кадр/с"
 
 msgctxt "ID_PLAY_PLAYBACKRATE_FPS24"
 msgid "24 fps"
@@ -644,7 +644,7 @@ msgstr "25 к/с"
 
 msgctxt "ID_PLAY_PLAYBACKRATE_FPS59"
 msgid "59.94 fps"
-msgstr ""
+msgstr "59.94 кадр/с"
 
 msgctxt "ID_PLAY_DECRATE"
 msgid "&Decrease Rate"
@@ -664,7 +664,7 @@ msgstr "&Фільтри"
 
 msgctxt "ID_COLOR_CONTROLS"
 msgid "&Color controls..."
-msgstr ""
+msgstr "Налаштування &кольору..."
 
 msgctxt "ID_SHADERS"
 msgid "S&haders"
@@ -680,7 +680,7 @@ msgstr "Доріжка су&бтитрів"
 
 msgctxt "ID_SUBTITLES_SECONDARY"
 msgid "Secondary Subtitle Track"
-msgstr ""
+msgstr "Другі субтитри"
 
 msgctxt "ID_VIDEO_STREAMS"
 msgid "Vide&o Track"

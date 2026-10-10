@@ -102,15 +102,15 @@ msgstr "Підсилення:"
 
 msgctxt "IDD_PPAGEAUDIOSWITCHER_IDC_STATIC7"
 msgid "ReplayGain:"
-msgstr ""
+msgstr "ReplayGain:"
 
 msgctxt "IDD_PPAGEAUDIOSWITCHER_IDC_STATIC8"
 msgid "Preamp (dB):"
-msgstr ""
+msgstr "Підсилення (дБ):"
 
 msgctxt "IDD_PPAGEAUDIOSWITCHER_IDC_CHECK7"
 msgid "Prevent clipping"
-msgstr ""
+msgstr "Запобігати перевантаженню"
 
 msgctxt "IDD_PPAGEAUDIOSWITCHER_IDC_CHECK4"
 msgid "Audio time shift (ms):"
@@ -460,11 +460,11 @@ msgstr "Коефіцієнт автомасштабу:"
 
 msgctxt "IDD_PPAGEPLAYBACK_IDC_STATIC"
 msgid "min %"
-msgstr ""
+msgstr "мін. %"
 
 msgctxt "IDD_PPAGEPLAYBACK_IDC_STATIC"
 msgid "max %"
-msgstr ""
+msgstr "макс. %"
 
 msgctxt "IDD_PPAGEPLAYBACK_IDC_STATIC4"
 msgid "Vertical Alignment:"
@@ -780,7 +780,7 @@ msgstr "Додати до вибраного"
 
 msgctxt "IDD_FAVADD_IDC_STATIC1"
 msgid "Choose a name for your shortcut:"
-msgstr ""
+msgstr "Назва для закладки:"
 
 msgctxt "IDD_FAVADD_IDC_CHECK1"
 msgid "Remember position"
@@ -828,15 +828,15 @@ msgstr "Гаразд"
 
 msgctxt "IDD_FAVORGANIZE_IDCANCEL"
 msgid "Cancel"
-msgstr ""
+msgstr "Скасувати"
 
 msgctxt "IDD_FAVORGANIZE_ID_APPLY_NOW"
 msgid "Apply"
-msgstr ""
+msgstr "Застосувати"
 
 msgctxt "IDD_PNSPRESET_DLG_CAPTION"
 msgid "PnS Frame Adjust Presets"
-msgstr ""
+msgstr "Набори положення й масштабу кадру"
 
 msgctxt "IDD_PNSPRESET_DLG_IDC_BUTTON2"
 msgid "New"
@@ -868,11 +868,11 @@ msgstr "&Зберегти"
 
 msgctxt "IDD_PNSPRESET_DLG_IDC_STATIC2"
 msgid "Pos: 0.0 -> 1.0"
-msgstr ""
+msgstr "Позиція: 0.0 -> 1.0"
 
 msgctxt "IDD_PNSPRESET_DLG_IDC_STATIC3"
 msgid "Zoom: 0.2 -> 3.0"
-msgstr ""
+msgstr "Масштаб: 0.2 -> 3.0"
 
 msgctxt "IDD_PPAGEACCELTBL_CAPTION"
 msgid "Shortcut Keys"
@@ -1052,23 +1052,23 @@ msgstr "Використовувати libass для SSA/ASS"
 
 msgctxt "IDD_PPAGEMOUSE_IDC_STATIC"
 msgid "Buttons"
-msgstr ""
+msgstr "Кнопки"
 
 msgctxt "IDD_PPAGEMOUSE_IDC_STATIC"
 msgid "Click"
-msgstr ""
+msgstr "Клацання"
 
 msgctxt "IDD_PPAGEMOUSE_IDC_STATIC"
 msgid "Double click"
-msgstr ""
+msgstr "Подвійне клацання"
 
 msgctxt "IDD_PPAGEMOUSE_IDC_STATIC"
 msgid "Right click"
-msgstr ""
+msgstr "Правий клік"
 
 msgctxt "IDD_PPAGEMOUSE_IDC_BUTTON2"
 msgid "Default"
-msgstr ""
+msgstr "За замовчуванням"
 
 msgctxt "IDD_PPAGEINTERNALFILTERS_IDC_STATIC"
 msgid ""
@@ -1120,7 +1120,7 @@ msgstr "Знайти..."
 
 msgctxt "IDD_PPAGEOUTPUT_IDC_STATIC"
 msgid "Video Renderer"
-msgstr ""
+msgstr "Відеорендерер"
 
 msgctxt "IDD_PPAGEOUTPUT_IDC_STATIC"
 msgid "Audio Renderer"
@@ -1224,11 +1224,11 @@ msgstr "дні(-в)"
 
 msgctxt "IDD_PPAGEMISC_IDC_STATIC"
 msgid "Color controls"
-msgstr ""
+msgstr "Налаштування кольору"
 
 msgctxt "IDD_PPAGEMISC_IDC_COLOR_CONTROLS"
 msgid "Open"
-msgstr ""
+msgstr "Відкрити"
 
 msgctxt "IDD_PPAGEMISC_IDC_STATIC"
 msgid "Settings management"
@@ -1352,7 +1352,7 @@ msgstr "Зупинити граф фільтрів"
 
 msgctxt "IDD_PPAGEVIDEORENDERER_IDC_STATIC"
 msgid "Common"
-msgstr ""
+msgstr "Загальні"
 
 msgctxt "IDD_PPAGEVIDEORENDERER_IDC_STATIC"
 msgid "Resizer:"
@@ -1384,11 +1384,11 @@ msgstr "Режим VMR-9 Mixer"
 
 msgctxt "IDD_PPAGEVIDEORENDERER_IDC_D3D9DEVICE"
 msgid "Select D3D9 Render Device"
-msgstr ""
+msgstr "Вибрати пристрій D3D9"
 
 msgctxt "IDD_PPAGEVIDEORENDERER_IDC_SYNC_GROUP"
 msgid "Sync Renderer"
-msgstr ""
+msgstr "Рендерер Sync"
 
 msgctxt "IDD_PPAGEVIDEORENDERER_IDC_SYNCVIDEO"
 msgid "Sync video to display"
@@ -1444,11 +1444,11 @@ msgstr "Зміни набудуть чинності після перезапу
 
 msgctxt "IDD_PPAGEVIDEORENDERER_IDC_STATIC"
 msgid "More renderer settings are available in the Play menu"
-msgstr ""
+msgstr "Інші налаштування рендерера є в меню «Відтворення»"
 
 msgctxt "IDD_PPAGEVIDEORENDERER_IDC_RESET"
 msgid "Reset"
-msgstr ""
+msgstr "Скинути"
 
 msgctxt "IDD_PPAGEFULLSCREEN_IDC_STATIC"
 msgid "Fullscreen monitor"
@@ -1460,7 +1460,7 @@ msgstr "Запускати файли на повний екран"
 
 msgctxt "IDD_PPAGEFULLSCREEN_IDC_CHECK7"
 msgid "Allow separate control window"
-msgstr ""
+msgstr "Дозволити окреме вікно керування"
 
 msgctxt "IDD_PPAGEFULLSCREEN_IDC_CHECK5"
 msgid "Exit fullscreen at the end of playback"
@@ -1796,51 +1796,51 @@ msgstr "Автовідтворення"
 
 msgctxt "IDD_ADDCOMMAND_DLG_CAPTION"
 msgid "Select command"
-msgstr ""
+msgstr "Виберіть команду"
 
 msgctxt "IDD_ADDCOMMAND_DLG_IDC_STATIC"
 msgid "Filter:"
-msgstr ""
+msgstr "Пошук:"
 
 msgctxt "IDD_ADDCOMMAND_DLG_IDOK"
 msgid "OK"
-msgstr ""
+msgstr "Гаразд"
 
 msgctxt "IDD_ADDCOMMAND_DLG_IDCANCEL"
 msgid "Cancel"
-msgstr ""
+msgstr "Скасувати"
 
 msgctxt "IDD_HISTORY_CAPTION"
 msgid "History"
-msgstr ""
+msgstr "Історія переглядів"
 
 msgctxt "IDD_HISTORY_IDC_BUTTON1"
 msgid "Menu"
-msgstr ""
+msgstr "Меню"
 
 msgctxt "IDD_HISTORY_IDC_BUTTON2"
 msgid "Remove selected"
-msgstr ""
+msgstr "Видалити вибране"
 
 msgctxt "IDD_COLORCONTROLS_DLG_CAPTION"
 msgid "Color controls"
-msgstr ""
+msgstr "Налаштування кольору"
 
 msgctxt "IDD_COLORCONTROLS_DLG_IDC_STATIC5"
 msgid "Brightness"
-msgstr ""
+msgstr "Яскравість"
 
 msgctxt "IDD_COLORCONTROLS_DLG_IDC_STATIC6"
 msgid "Contrast"
-msgstr ""
+msgstr "Контрастність"
 
 msgctxt "IDD_COLORCONTROLS_DLG_IDC_STATIC7"
 msgid "Hue"
-msgstr ""
+msgstr "Відтінок"
 
 msgctxt "IDD_COLORCONTROLS_DLG_IDC_STATIC8"
 msgid "Saturation"
-msgstr ""
+msgstr "Насиченість"
 
 msgctxt "IDD_COLORCONTROLS_DLG_IDC_RESET"
 msgid "Reset"
@@ -1848,157 +1848,159 @@ msgstr "Скинути"
 
 msgctxt "IDD_COLORCONTROLS_DLG_IDCANCEL"
 msgid "Close"
-msgstr ""
+msgstr "Закрити"
 
 msgctxt "IDD_REDIRECT_WAIT_DLG_CAPTION"
 msgid "MPC-HC"
-msgstr ""
+msgstr "MPC-HC"
 
 msgctxt "IDD_REDIRECT_WAIT_DLG_IDC_STATIC"
 msgid ""
 "Opening files is taking some time. Waiting for the first MPC-HC instance to "
 "respond."
 msgstr ""
+"Відкриття файлів триває довше, ніж зазвичай. Очікуємо відповіді від уже "
+"відкритого вікна MPC-HC."
 
 msgctxt "IDD_REDIRECT_WAIT_DLG_IDC_STATIC"
 msgid "Please wait and do not open more files for the next 30 seconds."
-msgstr ""
+msgstr "Зачекайте й не відкривайте інших файлів протягом 30 секунд."
 
 msgctxt "IDD_REDIRECT_WAIT_DLG_IDCANCEL"
 msgid "Open new window"
-msgstr ""
+msgstr "Відкрити нове вікно"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC1"
 msgid "Theme"
-msgstr ""
+msgstr "Тема"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK1"
 msgid "Use Modern Theme"
-msgstr ""
+msgstr "Сучасна тема оформлення"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC2"
 msgid "Modern Theme Color:"
-msgstr ""
+msgstr "Колір теми:"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC4"
 msgid "Seekbar"
-msgstr ""
+msgstr "Смуга перемотування"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC22"
 msgid "Modern Seekbar height:"
-msgstr ""
+msgstr "Висота смуги перемотування:"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK2"
 msgid "Show chapter marks on seekbar"
-msgstr ""
+msgstr "Показувати розділи на смузі перемотування"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC"
 msgid "Time on seekbar:"
-msgstr ""
+msgstr "Час на смузі перемотування:"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC8"
 msgid "Seekbar Hover"
-msgstr ""
+msgstr "Наведення на смугу перемотування"
 
 msgctxt "IDD_PPAGETHEME_IDC_SEEK_PREVIEW"
 msgid "Show video preview"
-msgstr ""
+msgstr "Показувати мініатюру кадру"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK14"
 msgid "Show time"
-msgstr ""
+msgstr "Показувати час"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC11"
 msgid "Hover Position:"
-msgstr ""
+msgstr "Положення підказки:"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC7"
 msgid "Preview width (% of screen)"
-msgstr ""
+msgstr "Ширина мініатюри (% екрана)"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC10"
 msgid "Status Bar Elements"
-msgstr ""
+msgstr "Що показувати в рядку стану"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK3"
 msgid "Track Language"
-msgstr ""
+msgstr "Мова доріжки"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK4"
 msgid "Video Info"
-msgstr ""
+msgstr "Дані про відео"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK12"
 msgid "Audio Info"
-msgstr ""
+msgstr "Дані про звук"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK5"
 msgid "FPS"
-msgstr ""
+msgstr "Кадр/с"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK6"
 msgid "A-B Marks"
-msgstr ""
+msgstr "Мітки A-B"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC21"
 msgid "Language"
-msgstr ""
+msgstr "Мова"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC5"
 msgid "Language:"
-msgstr ""
+msgstr "Мова інтерфейсу:"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC9"
 msgid "On Screen Display (OSD)"
-msgstr ""
+msgstr "Повідомлення на екрані (OSD)"
 
 msgctxt "IDD_PPAGETHEME_IDC_SHOW_OSD"
 msgid "Show OSD (requires restart)"
-msgstr ""
+msgstr "Показувати повідомлення (після перезапуску)"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC6"
 msgid "Font:"
-msgstr ""
+msgstr "Шрифт:"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC23"
 msgid "Font size:"
-msgstr ""
+msgstr "Розмір шрифту:"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK13"
 msgid "Display Current Time"
-msgstr ""
+msgstr "Показувати поточний час"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC"
 msgid "Window Behavior"
-msgstr ""
+msgstr "Поведінка вікна"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK7"
 msgid "Limit window proportions on resize"
-msgstr ""
+msgstr "Зберігати пропорції вікна при зміні розміру"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK9"
 msgid "Snap to desktop edges"
-msgstr ""
+msgstr "Прилипати до країв екрана"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK10"
 msgid "Hide Windowed Controls"
-msgstr ""
+msgstr "Ховати кнопки керування у віконному режимі"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC"
 msgid "Windows Integration"
-msgstr ""
+msgstr "Інтеграція з Windows"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK_ENHANCED_TASKBAR"
 msgid "Use enhanced taskbar features"
-msgstr ""
+msgstr "Кнопки керування на панелі завдань"
 
 msgctxt "IDD_PPAGETHEME_IDC_CHECK11"
 msgid "Control via Windows UI (SMTC)"
-msgstr ""
+msgstr "Керування з панелі мультимедіа Windows (SMTC)"
 
 msgctxt "IDD_PPAGETHEME_IDC_STATIC"
 msgid "Custom Preset (4)"
-msgstr ""
+msgstr "Власний вигляд (4)"
 
 msgctxt "IDD_PPAGETHEME_IDC_CUSTOMPRESET_MENU"
 msgid "Menu"
@@ -2026,72 +2028,72 @@ msgstr "Статистика"
 
 msgctxt "IDD_RAR_ENTRY_SELECTOR_CAPTION"
 msgid "Select Media from RAR"
-msgstr ""
+msgstr "Виберіть файл з архіву RAR"
 
 msgctxt "IDD_RAR_ENTRY_SELECTOR_IDOK"
 msgid "Select"
-msgstr ""
+msgstr "Вибрати"
 
 msgctxt "IDD_RAR_ENTRY_SELECTOR_IDCANCEL"
 msgid "Cancel"
-msgstr ""
+msgstr "Скасувати"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Toolbar Style"
-msgstr ""
+msgstr "Стиль панелі кнопок"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC3"
 msgid "Toolbar Scale:"
-msgstr ""
+msgstr "Розмір кнопок:"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Toolbar Alignment:"
-msgstr ""
+msgstr "Вирівнювання кнопок:"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Active Style:"
-msgstr ""
+msgstr "Поточний стиль:"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Custom Button 1"
-msgstr ""
+msgstr "Власна кнопка 1"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Click"
-msgstr ""
+msgstr "Клацання"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Right click"
-msgstr ""
+msgstr "Правий клік"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Custom Button 2"
-msgstr ""
+msgstr "Власна кнопка 2"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Custom Button 3"
-msgstr ""
+msgstr "Власна кнопка 3"
 
 msgctxt "IDD_PPAGETOOLBAR_IDC_STATIC"
 msgid "Custom Button 4"
-msgstr ""
+msgstr "Власна кнопка 4"
 
 msgctxt "IDD_PPAGETOOLBARLAYOUT_IDC_BUTTON3"
 msgid "<<"
-msgstr ""
+msgstr "<<"
 
 msgctxt "IDD_PPAGETOOLBARLAYOUT_IDC_BUTTON4"
 msgid ">>"
-msgstr ""
+msgstr ">>"
 
 msgctxt "IDD_PPAGETOOLBARLAYOUT_IDC_BUTTON5"
 msgid "^"
-msgstr ""
+msgstr "^"
 
 msgctxt "IDD_PPAGETOOLBARLAYOUT_IDC_BUTTON6"
 msgid "v"
-msgstr ""
+msgstr "v"
 
 msgctxt "IDD_PPAGETOOLBARLAYOUT_IDC_BUTTON1"
 msgid "Default"
-msgstr ""
+msgstr "За замовчуванням"
