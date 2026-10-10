@@ -126,6 +126,12 @@ std::list<Translations::LanguageResource> Translations::GetAvailableLanguageReso
 
 LANGID Translations::SetDefaultLanguage()
 {
+    // series-player: Ukrainian is the default interface language (it can be changed in Options)
+    const LANGID ukrainian = MAKELANGID(LANG_UKRAINIAN, SUBLANG_UKRAINIAN_UKRAINE);
+    if (SetLanguage(ukrainian, false)) {
+        return ukrainian;
+    }
+
     LANGID localeID = GetUserDefaultUILanguage();
     // Try to set the language resource but don't fail if it can't be loaded
     // English will we used instead in case of error

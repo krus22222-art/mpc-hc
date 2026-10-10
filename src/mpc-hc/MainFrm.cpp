@@ -17238,7 +17238,9 @@ bool CMainFrame::OpenMediaPrivate(CAutoPtr<OpenMediaData> pOMD)
             if (pMRU->rfe_array.GetCount()) {
                 if (!rtPos && m_bRememberFilePos) {
                     rtPos = pMRU->GetCurrentFilePosition();
-                    if (rtPos >= rtDur || rtDur - rtPos < 50000000LL) {
+                    // series-player: an episode watched to 95 % or more counts as finished
+                    // and starts from the beginning instead of resuming in the end credits.
+                    if (rtPos >= rtDur || rtDur - rtPos < 50000000LL || rtPos >= rtDur / 100 * 95) {
                         rtPos = 0;
                     }
                 }

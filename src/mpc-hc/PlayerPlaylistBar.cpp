@@ -1208,6 +1208,11 @@ void CPlayerPlaylistBar::Open(CAtlList<CString>& fns, bool fMulti, CAtlList<CStr
     Empty();
     Append(fns, fMulti, subs, label, ydl_src, ydl_ua, cue);
 
+    // series-player: opening a folder (several episodes) shows the episode list right away
+    if (m_pl.GetCount() > 1 && !IsWindowVisible() && !m_pMainFrame->IsFullScreenMode()) {
+        m_pMainFrame->ShowControlBar(this, TRUE, FALSE);
+    }
+
     CString ext = CLongPath(fns.GetHead()).GetExtension().MakeLower();
     if (!fMulti && (ext == _T(".mpcpl"))) {
         m_playListPath = fns.GetHead();

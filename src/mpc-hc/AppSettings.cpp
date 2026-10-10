@@ -77,7 +77,7 @@ CAppSettings::CAppSettings()
     , MRU(L"MediaHistory", iRecentFilesNumber)
     , MRUDub(0, _T("Recent Dub List"), _T("Dub%d"), 20)
     , fRememberDVDPos(false)
-    , fRememberFilePos(false)
+    , fRememberFilePos(true)
     , iRememberPosForLongerThan(5)
     , bRememberPosForAudioFiles(true)
     , bRememberExternalPlaylistPos(true)
@@ -590,7 +590,7 @@ static constexpr wmcmd_base default_wmcmds[] = {
     { ID_FILE_OPENMEDIA,                  'O', FCONTROL,          IDS_AG_OPEN_FILE },
     { ID_FILE_OPENDVDBD,                  'D', FCONTROL,          IDS_AG_OPEN_DVD },
     { ID_FILE_OPENDEVICE,                 'V', FCONTROL,          IDS_AG_OPEN_DEVICE },
-    { ID_FILE_OPENDIRECTORY,                0, 0,                 IDS_AG_OPENDIRECTORY },
+    { ID_FILE_OPENDIRECTORY,              'O', FCONTROL | FSHIFT, IDS_AG_OPENDIRECTORY }, // series-player: Ctrl+Shift+O
     { ID_FILE_REOPEN,                     'E', FCONTROL,          IDS_AG_REOPEN },
     { ID_FILE_RECYCLE,              VK_DELETE, 0,                 IDS_FILE_RECYCLE },
     { ID_FILE_SAVE_COPY,                    0, 0,                 IDS_AG_SAVE_COPY },
@@ -2268,7 +2268,8 @@ void CAppSettings::LoadSettings()
     }
 
     // playback positions for last played files
-    fRememberFilePos = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOS, FALSE);
+    // series-player: resume where the viewer stopped is on by default
+    fRememberFilePos = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOS, TRUE);
     iRememberPosForLongerThan = pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOSLONGER, 5);
     bRememberPosForAudioFiles = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOSAUDIO, TRUE);
     if (iRememberPosForLongerThan < 0) {
@@ -2287,7 +2288,9 @@ void CAppSettings::LoadSettings()
     bHighPrecisionTimer = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_HIGH_PRECISION_TIMER, FALSE);
     bTimerShowPercentage = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_TIMER_SHOW_PERCENTAGE, FALSE);
 
-    nUpdaterAutoCheck = pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_UPDATER_AUTO_CHECK, AUTOUPDATE_UNKNOWN);
+    // series-player: personal build, no automatic network requests (no first-run prompt, no auto check);
+    // an upstream "update" would replace the customised player.
+    nUpdaterAutoCheck = pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_UPDATER_AUTO_CHECK, AUTOUPDATE_DISABLE);
     nUpdaterDelay = pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_UPDATER_DELAY, 7);
     if (nUpdaterDelay < 1) {
         nUpdaterDelay = 1;
