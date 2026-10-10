@@ -12,7 +12,7 @@
 | Відео | Windows Graphics Capture вікна плеєра → обрізка до області відео → libyuv (масштаб, NV12) → кодер H.264 Media Foundation (Windows, Constrained Baseline, CBR 4.5 Мбіт/с, до 1080p30) |
 | Звук | WASAPI process loopback (лише процес MPC-HC, Windows 10 2004+) → Opus 128 кбіт/с |
 | Передача | libdatachannel (WebRTC: ICE, DTLS-SRTP, RTP; NACK, PLI, RTCP SR) |
-| Сигналізація | етап 1: вбудований HTTP-сервер лише на `127.0.0.1` (сторінка глядача + обмін SDP). Етап 2: ретрансляція через інтернет (у розробці) |
+| Сигналізація | Cloudflare Worker + Durable Object (`relay/`): лише обмін SDP між браузером глядача і плеєром; сторінка глядача `/r/<кімната>`. Для перевірки є також локальний сервер на `127.0.0.1` |
 
 Окремий процес: збій трансляції не впливає на відтворення.
 
