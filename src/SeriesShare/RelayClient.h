@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -23,6 +24,9 @@ public:
     bool Connected() const { return m_connected; }
     std::string ViewerUrl() const { return m_base + "/r/" + m_room; }
     std::string LastError() const;
+
+    // A viewer asked for a player action ("playpause"); called on the WebSocket thread.
+    std::function<void(const std::string& action)> onControl;
 
 private:
     void Loop();

@@ -252,6 +252,11 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show)
     if (g.useRelay) {
         auto id = ShareIdentity::LoadOrCreate(g.relayBase);
         g.relay = std::make_unique<RelayClient>(*g.streamer, id.relay, id.room, id.key);
+        // The viewer may pause/resume playback (both sides see the same picture anyway)
+        g.relay->onControl = [](const std::string& action) {
+            constexpr WPARAM kPlayPause = 889;  // ID_PLAY_PLAYPAUSE in MPC-HC
+            if (action == "playpause" && g.player && IsWindow(g.player)) PostMessageW(g.player, WM_COMMAND, kPlayPause, 0);
+        };
         g.relay->Start();
         g.url = Widen(g.relay->ViewerUrl());
     }

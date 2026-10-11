@@ -122,7 +122,7 @@ export default {
       });
     }
 
-    if (url.pathname === "/host" || url.pathname === "/offer" || url.pathname === "/answer" || url.pathname === "/ice") {
+    if (url.pathname === "/host" || url.pathname === "/offer" || url.pathname === "/answer" || url.pathname === "/ice" || url.pathname === "/control") {
       const room = url.searchParams.get("room") || "";
       if (!ROOM_RE.test(room)) return json({ error: "bad room" }, 400);
       const stub = env.ROOMS.get(env.ROOMS.idFromName(room));
@@ -152,6 +152,14 @@ export class Room {
       if (!this.host) return json({ error: "offline" }, 404);
       const list = await iceServers(this.env);
       return json({ iceServers: list });
+    }
+    if (url.pathname === "/control" && request.method === "POST") {
+      // A viewer pauses/resumes the player (fire and forget; only known actions are passed on)
+      const action = url.searchParams.get("action");
+      if (action !== "playpause") return json({ error: "bad action" }, 400);
+      if (!this.host) return json({ error: "offline" }, 404);
+      try { this.host.send(JSON.stringify({ type: "control", action })); } catch (e) { return json({ error: "offline" }, 404); }
+      return new Response(null, { status: 204, headers: cors() });
     }
     if (url.pathname === "/offer" && request.method === "POST") return this.relay({ type: "offer" });
     if (url.pathname === "/answer" && request.method === "POST") {

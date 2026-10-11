@@ -37,6 +37,7 @@
 </div>
 <div id="hint" hidden>🔇 Торкніться екрана, щоб увімкнути звук</div>
 <div id="bar" hidden>
+  <button id="pp" hidden>⏯ Пауза</button>
   <button id="fs">⛶ На весь екран</button>
 </div>
 <script>
@@ -216,6 +217,15 @@ let idleTimer = null;
 function wake() { bar.classList.remove("idle"); clearTimeout(idleTimer); idleTimer = setTimeout(() => bar.classList.add("idle"), 4000); }
 ["pointerdown", "pointermove", "keydown"].forEach(e => addEventListener(e, wake, { passive: true }));
 wake();
+
+// Pause / resume the film for both (the player on the laptop is paused; works only through the relay)
+const ppBtn = document.getElementById("pp");
+if (room) ppBtn.hidden = false;
+ppBtn.onclick = async () => {
+  ppBtn.disabled = true;
+  try { await fetch(api + "/control?room=" + encodeURIComponent(room) + "&action=playpause", { method: "POST", cache: "no-store" }); } catch (e) {}
+  setTimeout(() => { ppBtn.disabled = false; }, 600);
+};
 
 go.onclick = () => { playWithSound(); overlay.classList.add("hidden"); keepAwake(); };
 // One button: fullscreen. The phone may be turned either way; no orientation lock.

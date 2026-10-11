@@ -622,6 +622,7 @@ static constexpr wmcmd_base default_wmcmds[] = {
     { ID_PLAY_SEEKBACKWARDMED,        VK_LEFT, 0,                 IDS_MPLAYERC_26 },
     { ID_PLAY_SEEKFORWARDLARGE,             0, 0,                 IDS_MPLAYERC_27,    0, wmcmd::WUP,   FVIRTKEY | FCONTROL },
     { ID_PLAY_SEEKBACKWARDLARGE,            0, 0,                 IDS_MPLAYERC_28,    0, wmcmd::WDOWN, FVIRTKEY | FCONTROL },
+    { ID_PLAY_SKIP_OPENING,               'I', 0,                 IDS_AG_SKIP_OPENING }, // series-player: skip an anime opening
     { ID_PLAY_SEEKKEYFORWARD,        VK_RIGHT, FSHIFT,            IDS_MPLAYERC_29 },
     { ID_PLAY_SEEKKEYBACKWARD,        VK_LEFT, FSHIFT,            IDS_MPLAYERC_30 },
     { ID_PLAY_SEEKSET,                VK_HOME, 0,                 IDS_AG_SEEKSET },

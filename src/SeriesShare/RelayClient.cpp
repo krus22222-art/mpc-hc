@@ -222,6 +222,10 @@ void RelayClient::OnMessage(const std::string& text)
         m_streamer.SetIceServersJson(msg["iceServers"].dump());
         return;
     }
+    if (type == "control") {
+        if (onControl) onControl(msg.value("action", ""));
+        return;
+    }
     const std::string reqId = msg.value("reqId", "");
     if (reqId.empty()) return;
 

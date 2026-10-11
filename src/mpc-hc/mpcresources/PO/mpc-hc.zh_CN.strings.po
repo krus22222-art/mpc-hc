@@ -5326,6 +5326,10 @@ msgctxt "IDS_MODERN_THEME_STYLE_WINDOWS11"
 msgid "Windows 11"
 msgstr "Windows 11"
 
+msgctxt "IDS_AG_SKIP_OPENING"
+msgid "Skip opening (+1:20)"
+msgstr ""
+
 msgctxt "IDS_AUDIO_BOOST_WARNING"
 msgid ""
 "WARNING: Boosting audio volume can in some situations have a negative effect on audio quality due to overflow.\n"

@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: MPC-HC\n"
-"POT-Creation-Date: 2026-10-03 13:02:08+0000\n"
+"POT-Creation-Date: 2026-10-11 10:32:51+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5138,6 +5138,10 @@ msgstr ""
 
 msgctxt "IDS_MODERN_THEME_STYLE_WINDOWS11"
 msgid "Windows 11"
+msgstr ""
+
+msgctxt "IDS_AG_SKIP_OPENING"
+msgid "Skip opening (+1:20)"
 msgstr ""
 
 msgctxt "IDS_AUDIO_BOOST_WARNING"

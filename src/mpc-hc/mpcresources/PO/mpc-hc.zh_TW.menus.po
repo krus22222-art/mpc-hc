@@ -547,6 +547,10 @@ msgctxt "ID_PLAY_FRAMESTEP"
 msgid "Fra&me Step"
 msgstr "單格步進(&R)"
 
+msgctxt "ID_PLAY_SKIP_OPENING"
+msgid "Skip &Opening (+1:20)"
+msgstr ""
+
 msgctxt "POPUP"
 msgid "&Repeat"
 msgstr "重複播放 (&R)"

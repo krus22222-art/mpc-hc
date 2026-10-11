@@ -652,6 +652,8 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
     // Open Dir incl. SubDir
     ON_COMMAND(ID_FILE_OPENDIRECTORY, OnFileOpendirectory)
     ON_COMMAND(ID_FILE_SHARE, OnFileShare)
+    ON_COMMAND(ID_PLAY_SKIP_OPENING, OnPlaySkipOpening)
+    ON_UPDATE_COMMAND_UI(ID_PLAY_SKIP_OPENING, OnUpdatePlaySeek)
     ON_UPDATE_COMMAND_UI(ID_FILE_SHARE, OnUpdateFileShare)
     ON_UPDATE_COMMAND_UI(ID_FILE_OPENDIRECTORY, OnUpdateFileOpen)
     ON_WM_POWERBROADCAST()
@@ -10436,6 +10438,19 @@ void CMainFrame::OnPlaySeek(UINT nID)
         rtSeekTo = GetClosestKeyFrame(rtSeekTo, rtMaxForwardDiff, rtMaxBackwardDiff);
     }
 
+    SeekTo(rtSeekTo);
+}
+
+// series-player: jump over an anime opening (about 1:20) from the current position
+void CMainFrame::OnPlaySkipOpening()
+{
+    constexpr REFERENCE_TIME rtOpening = 80 * 10000000i64;
+    REFERENCE_TIME rtSeekTo = m_wndSeekBar.GetPos() + rtOpening;
+    REFERENCE_TIME rtStart = 0, rtStop = 0;
+    m_wndSeekBar.GetRange(rtStart, rtStop);
+    if (rtStop > 0 && rtSeekTo > rtStop) {
+        rtSeekTo = rtStop;
+    }
     SeekTo(rtSeekTo);
 }
 

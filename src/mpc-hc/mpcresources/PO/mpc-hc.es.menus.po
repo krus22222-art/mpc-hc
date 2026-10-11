@@ -550,6 +550,10 @@ msgctxt "ID_PLAY_FRAMESTEP"
 msgid "Fra&me Step"
 msgstr "A&vanzar un fotograma"
 
+msgctxt "ID_PLAY_SKIP_OPENING"
+msgid "Skip &Opening (+1:20)"
+msgstr ""
+
 msgctxt "POPUP"
 msgid "&Repeat"
 msgstr "Repetir"

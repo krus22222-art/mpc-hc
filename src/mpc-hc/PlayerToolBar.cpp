@@ -94,6 +94,7 @@ std::map<WORD, CPlayerToolBar::svgButtonInfo> CPlayerToolBar::supportedSvgButton
     {ID_BUTTON_REPEAT, {TBBS_BUTTON, 15, IDS_AG_ENABLE_REPEAT, LOCK_NONE, IDS_AG_DISABLE_REPEAT}},
     {ID_PLAY_SEEKBACKWARDMED, {TBBS_BUTTON, 16}},
     {ID_PLAY_SEEKFORWARDMED, {TBBS_BUTTON, 17}},
+    {ID_PLAY_SKIP_OPENING, {TBBS_BUTTON, 17}},  // series-player: skip opening (+1:20)
     {ID_FILE_PROPERTIES, {TBBS_BUTTON, 18}},
     {ID_FILE_EXIT, {TBBS_BUTTON, 19}},
     {ID_CUSTOM_ACTION1, {TBBS_BUTTON, 20, IDS_CUSTOM_ACTION1}},
@@ -536,6 +537,7 @@ void CPlayerToolBar::PlaceButtons(bool loadSavedLayout) {
         addButton(ID_PLAY_DECRATE);
         addButton(ID_PLAY_INCRATE);
         addButton(ID_NAVIGATE_SKIPFORWARD);
+        addButton(ID_PLAY_SKIP_OPENING);
         addButton(ID_PLAY_FRAMESTEP);
     }
 
