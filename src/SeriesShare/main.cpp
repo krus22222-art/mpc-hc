@@ -128,8 +128,8 @@ void UpdateStats()
     if (!g.streamer) return;
     wchar_t buf[256];
     const int viewers = g.streamer->ViewerCount();
-    swprintf_s(buf, L"Глядачів: %d   ·   Відео: %d×%d, %.0f кадр/с   ·   Звук: %s   ·   Передано: %s", viewers, g.video.Width(), g.video.Height(),
-               g.video.CurrentFps(), g.audioOk ? L"так" : L"ні", FormatBytes(g.streamer->BytesSent()).c_str());
+    swprintf_s(buf, L"Глядачів: %d   ·   Відео: %d×%d, %.0f кадр/с   ·   Звук: %s   ·   Ретранслятор: %s   ·   Передано: %s", viewers, g.video.Width(), g.video.Height(),
+               g.video.CurrentFps(), g.audioOk ? L"так" : L"ні", g.streamer->HasTurn() ? L"готовий" : L"немає", FormatBytes(g.streamer->BytesSent()).c_str());
     SetText(IDC_STATS, buf);
     if (g.relay && !g.relay->Connected()) {
         const std::string err = g.relay->LastError();

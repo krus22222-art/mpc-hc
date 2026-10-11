@@ -142,6 +142,10 @@ void RelayClient::Loop()
         }
         if (m_connected) {
             backoffMs = 1000;
+            if (m_needIce.exchange(false) || now - m_iceRequested > std::chrono::hours(4)) {
+                Send(R"({"type":"get-ice"})");  // TURN credentials (TTL 6 h), refreshed every 4 h
+                m_iceRequested = now;
+            }
             if (now - lastPing > std::chrono::seconds(25)) {
                 Send(R"({"type":"ping"})");
                 lastPing = now;
@@ -161,6 +165,7 @@ void RelayClient::Connect()
     std::weak_ptr<rtc::WebSocket> weak = ws;
     ws->onOpen([this] {
         m_connected = true;
+        m_needIce = true;  // ask for TURN credentials right away
         std::lock_guard<std::mutex> l(m_errMutex);
         m_lastError.clear();
     });
@@ -213,6 +218,10 @@ void RelayClient::OnMessage(const std::string& text)
     nlohmann::json msg;
     try { msg = nlohmann::json::parse(text); } catch (...) { return; }
     const std::string type = msg.value("type", "");
+    if (type == "ice" && msg.contains("iceServers")) {
+        m_streamer.SetIceServersJson(msg["iceServers"].dump());
+        return;
+    }
     const std::string reqId = msg.value("reqId", "");
     if (reqId.empty()) return;
 

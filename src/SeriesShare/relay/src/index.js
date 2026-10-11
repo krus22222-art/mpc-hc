@@ -11,6 +11,28 @@
 import { VIEWER_HTML } from "./viewer.js";
 
 const ROOM_RE = /^[a-z0-9]{8,32}$/;
+const STUN_ONLY = [{ urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] }];
+
+// Short-lived TURN credentials from Cloudflare Realtime (secrets TURN_KEY_ID / TURN_KEY_API_TOKEN).
+// Used when a direct peer-to-peer path is impossible (CGNAT, strict firewalls).
+async function iceServers(env, ttl = 6 * 3600) {
+  const keyId = (env.TURN_KEY_ID || "").trim();
+  const token = (env.TURN_KEY_API_TOKEN || "").trim();
+  if (!keyId || !token) { return STUN_ONLY; }
+  try {
+    const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${keyId}/credentials/generate-ice-servers`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ ttl }),
+    });
+    if (!r.ok) { console.warn(`TURN credentials: HTTP ${r.status}`); return STUN_ONLY; }
+    const data = await r.json();
+    return data.iceServers && data.iceServers.length ? data.iceServers : STUN_ONLY;
+  } catch (e) {
+    console.warn(`TURN credentials: ${e}`);
+    return STUN_ONLY;
+  }
+}
 
 function cors(headers = {}) {
   return {
@@ -43,7 +65,7 @@ export default {
       });
     }
 
-    if (url.pathname === "/host" || url.pathname === "/offer" || url.pathname === "/answer") {
+    if (url.pathname === "/host" || url.pathname === "/offer" || url.pathname === "/answer" || url.pathname === "/ice") {
       const room = url.searchParams.get("room") || "";
       if (!ROOM_RE.test(room)) return json({ error: "bad room" }, 400);
       const stub = env.ROOMS.get(env.ROOMS.idFromName(room));
@@ -60,6 +82,7 @@ export default {
 export class Room {
   constructor(state, env) {
     this.state = state;
+    this.env = env;
     this.host = null;        // WebSocket to the player
     this.pending = new Map(); // reqId -> {resolve, timer}
   }
@@ -67,6 +90,12 @@ export class Room {
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/host") return this.acceptHost(request, url);
+    if (url.pathname === "/ice") {
+      // Viewers get TURN credentials only while the player is online (no free TURN for strangers).
+      if (!this.host) return json({ error: "offline" }, 404);
+      const list = await iceServers(this.env);
+      return json({ iceServers: list });
+    }
     if (url.pathname === "/offer" && request.method === "POST") return this.relay({ type: "offer" });
     if (url.pathname === "/answer" && request.method === "POST") {
       const id = url.searchParams.get("id") || "";
@@ -97,6 +126,13 @@ export class Room {
       let msg;
       try { msg = JSON.parse(event.data); } catch (e) { return; }
       if (msg.type === "ping") { try { server.send('{"type":"pong"}'); } catch (e) {} return; }
+      if (msg.type === "get-ice") {
+        // The player answers on its own (direct/STUN) path; the viewer relays through TURN when it has to,
+        // and a TURN relay address is reachable from anywhere, so one relayed side is enough.
+
+        try { server.send(JSON.stringify({ type: "ice", iceServers: STUN_ONLY })); } catch (e) {}
+        return;
+      }
       const p = msg.reqId && this.pending.get(msg.reqId);
       if (p) {
         clearTimeout(p.timer);

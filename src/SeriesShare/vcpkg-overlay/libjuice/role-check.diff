@@ -1,0 +1,15 @@
+diff --git a/src/agent.c b/src/agent.c
+index 6d1dcf2..a1367e1 100644
+--- a/src/agent.c
++++ b/src/agent.c
+@@ -1437,7 +1437,9 @@ int agent_process_stun_binding(juice_agent_t *agent, const stun_message_t *msg,
+ 			return -1;
+ 
+ 		ice_candidate_pair_t *pair = entry->pair;
+-		if (msg->ice_controlling == msg->ice_controlled) {
++		// Only both attributes present is an error: a zero tiebreaker is legal (Chrome uses 0 on some
++		// relay checks), so equal values do not mean both or neither attribute was sent.
++		if (msg->ice_controlling && msg->ice_controlled) {
+ 			JLOG_WARN("Controlling and controlled attributes mismatch in request");
+ 			agent_send_stun_binding(agent, entry, STUN_CLASS_RESP_ERROR, 400, msg->transaction_id,
+ 			                        NULL);

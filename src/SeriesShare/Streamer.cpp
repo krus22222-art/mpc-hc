@@ -2,6 +2,7 @@
 
 #include <rtc/rtc.hpp>
 #include <psa/crypto.h>
+#include <nlohmann/json.hpp>
 
 #include <windows.h>
 
@@ -48,7 +49,10 @@ Streamer::Streamer(std::vector<std::string> iceServers) : m_iceServers(std::move
     std::remove(logPath.c_str());
     // Mbed TLS 3.6 performs (D)TLS key exchange through PSA Crypto, which must be initialised once.
     psa_crypto_init();
-    rtc::InitLogger(rtc::LogLevel::Warning, [](rtc::LogLevel level, std::string message) {
+    // MPC_SHARE_DEBUG=1 enables verbose WebRTC/ICE diagnostics in the log file
+    char dbg[8] = {};
+    const bool verbose = GetEnvironmentVariableA("MPC_SHARE_DEBUG", dbg, sizeof(dbg)) > 0 && dbg[0] == '1';
+    rtc::InitLogger(verbose ? rtc::LogLevel::Verbose : rtc::LogLevel::Warning, [](rtc::LogLevel level, std::string message) {
         std::lock_guard<std::mutex> l(logMutex);
         if (FILE* f = std::fopen(logPath.c_str(), "a")) {
             std::fprintf(f, "[%d] %s\n", int(level), message.c_str());
@@ -74,8 +78,44 @@ std::optional<Streamer::Offer> Streamer::CreateOffer()
     Cleanup();
 
     rtc::Configuration config;
-    for (const auto& s : m_iceServers) {
-        config.iceServers.emplace_back(s);
+    std::string iceJson;
+    {
+        std::lock_guard<std::mutex> l(m_mutex);
+        iceJson = m_iceJson;
+    }
+    bool fromRelay = false;
+    if (!iceJson.empty()) {
+        // [{urls: string|[string], username, credential}] as returned by Cloudflare Realtime
+        try {
+            for (const auto& s : nlohmann::json::parse(iceJson)) {
+                std::vector<std::string> urls;
+                if (s["urls"].is_string()) urls.push_back(s["urls"].get<std::string>());
+                else for (const auto& u : s["urls"]) urls.push_back(u.get<std::string>());
+                const std::string user = s.value("username", ""), pass = s.value("credential", "");
+                for (const auto& u : urls) {
+                    if (u.rfind("stun:", 0) == 0) {
+                        config.iceServers.emplace_back(u);
+                        fromRelay = true;
+                    } else if (u.rfind("turn:", 0) == 0 && u.find("transport=tcp") == std::string::npos) {
+                        // libjuice supports TURN over UDP (the viewer side may use TCP/TLS to the same server)
+                        std::string hostPort = u.substr(5, u.find('?') == std::string::npos ? std::string::npos : u.find('?') - 5);
+                        const size_t colon = hostPort.rfind(':');
+                        const std::string host = hostPort.substr(0, colon);
+                        const uint16_t port = colon == std::string::npos ? 3478 : uint16_t(std::stoi(hostPort.substr(colon + 1)));
+                        config.iceServers.emplace_back(host, port, user, pass, rtc::IceServer::RelayType::TurnUdp);
+                        fromRelay = true;
+                    }
+                }
+            }
+        } catch (...) {
+            config.iceServers.clear();
+            fromRelay = false;
+        }
+    }
+    if (!fromRelay) {
+        for (const auto& s : m_iceServers) {
+            config.iceServers.emplace_back(s);
+        }
     }
     config.disableAutoNegotiation = true;
 
@@ -221,6 +261,15 @@ void Streamer::SendAudio(const uint8_t* data, size_t size, double seconds)
         } catch (...) {
         }
     }
+}
+
+void Streamer::SetIceServersJson(const std::string& json)
+{
+    {
+        std::lock_guard<std::mutex> l(m_mutex);
+        m_iceJson = json;
+    }
+    m_hasTurn = json.find("turn:") != std::string::npos;
 }
 
 int Streamer::ViewerCount() const

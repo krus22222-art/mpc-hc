@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -39,6 +40,8 @@ private:
     std::atomic<bool> m_connected{false};
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_reconnect{true};
+    std::atomic<bool> m_needIce{true};
+    std::chrono::steady_clock::time_point m_iceRequested{};  // Loop thread only
     std::thread m_thread;
 };
 

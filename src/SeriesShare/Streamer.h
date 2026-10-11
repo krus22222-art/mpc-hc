@@ -32,6 +32,10 @@ public:
     void SendVideo(const uint8_t* data, size_t size, bool key, double seconds);
     void SendAudio(const uint8_t* data, size_t size, double seconds);
 
+    // iceServers JSON array from the relay (Cloudflare TURN credentials), replaces the STUN-only default
+    void SetIceServersJson(const std::string& json);
+    bool HasTurn() const { return m_hasTurn; }
+
     int ViewerCount() const;
     uint64_t BytesSent() const { return m_bytesSent; }
 
@@ -42,6 +46,8 @@ private:
     void Cleanup();
 
     std::vector<std::string> m_iceServers;
+    std::string m_iceJson;  // guarded by m_mutex
+    std::atomic<bool> m_hasTurn{false};
     mutable std::mutex m_mutex;
     std::map<std::string, std::shared_ptr<Viewer>> m_viewers;
     std::atomic<uint64_t> m_bytesSent{0};

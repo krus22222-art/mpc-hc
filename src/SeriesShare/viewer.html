@@ -65,7 +65,14 @@ async function connect() {
     if (r.status === 404 || r.status === 410) { show("Трансляцію ще не запущено або вже завершено. Сторінка оновиться сама.", true, false); retryTimer = setTimeout(connect, 4000); return; }
     if (!r.ok) throw new Error("HTTP " + r.status);
     const { id, sdp } = await r.json();
-    pc = new RTCPeerConnection({ iceServers: ICE });
+    // TURN relay credentials (for networks where a direct path is impossible); STUN-only fallback
+    let ice = ICE;
+    try {
+      const ir = await fetch(api + "/ice" + q, { cache: "no-store" });
+      if (ir.ok) { const j = await ir.json(); if (j.iceServers && j.iceServers.length) ice = j.iceServers; }
+    } catch (e) {}
+    // ?relay=1 forces the TURN path (diagnostics: behaves like a network without a direct route)
+    pc = new RTCPeerConnection({ iceServers: ice, iceTransportPolicy: params.has("relay") ? "relay" : "all" });
     const stream = new MediaStream();
     v.srcObject = stream;
     pc.ontrack = e => { stream.addTrack(e.track); };
