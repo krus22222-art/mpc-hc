@@ -156,7 +156,7 @@ export class Room {
     if (url.pathname === "/control" && request.method === "POST") {
       // A viewer pauses/resumes the player (fire and forget; only known actions are passed on)
       const action = url.searchParams.get("action");
-      if (action !== "playpause") return json({ error: "bad action" }, 400);
+      if (!["playpause", "next", "prev"].includes(action)) return json({ error: "bad action" }, 400);
       if (!this.host) return json({ error: "offline" }, 404);
       try { this.host.send(JSON.stringify({ type: "control", action })); } catch (e) { return json({ error: "offline" }, 404); }
       return new Response(null, { status: 204, headers: cors() });

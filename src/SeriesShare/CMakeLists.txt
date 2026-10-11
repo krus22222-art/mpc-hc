@@ -20,7 +20,16 @@ find_package(libyuv CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 # The viewer page is embedded into the executable.
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/viewer.html" VIEWER_HTML)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/viewer.html" VIEWER_HTML_RAW)
+# MSVC limits a single string literal to ~16 KB: emit the page as adjacent raw literals of 8000 bytes.
+string(LENGTH "${VIEWER_HTML_RAW}" VIEWER_HTML_LEN)
+set(VIEWER_HTML "")
+set(VIEWER_HTML_POS 0)
+while(VIEWER_HTML_POS LESS VIEWER_HTML_LEN)
+    string(SUBSTRING "${VIEWER_HTML_RAW}" ${VIEWER_HTML_POS} 8000 VIEWER_HTML_CHUNK)
+    string(APPEND VIEWER_HTML "R\"VIEWERHTML(${VIEWER_HTML_CHUNK})VIEWERHTML\"\n")
+    math(EXPR VIEWER_HTML_POS "${VIEWER_HTML_POS} + 8000")
+endwhile()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/viewer_html.h.in" "${CMAKE_CURRENT_BINARY_DIR}/viewer_html.h" @ONLY)
 
 add_executable(mpc-share WIN32
