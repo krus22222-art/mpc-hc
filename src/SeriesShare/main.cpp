@@ -126,10 +126,12 @@ std::wstring FormatBytes(uint64_t b)
 void UpdateStats()
 {
     if (!g.streamer) return;
-    wchar_t buf[256];
+    wchar_t buf[256], video[96];
     const int viewers = g.streamer->ViewerCount();
-    swprintf_s(buf, L"Глядачів: %d   ·   Відео: %d×%d, %.0f кадр/с   ·   Звук: %s   ·   Ретранслятор: %s   ·   Передано: %s", viewers, g.video.Width(), g.video.Height(),
-               g.video.CurrentFps(), g.audioOk ? L"так" : L"ні", g.streamer->HasTurn() ? L"готовий" : L"немає", FormatBytes(g.streamer->BytesSent()).c_str());
+    if (g.video.Width() > 0) swprintf_s(video, L"%d×%d, %.0f кадр/с", g.video.Width(), g.video.Height(), g.video.CurrentFps());
+    else swprintf_s(video, L"немає — відкрийте серію в плеєрі");
+    swprintf_s(buf, L"Глядачів: %d   ·   Відео: %s   ·   Звук: %s   ·   Передано: %s", viewers, video,
+               g.audioOk ? L"так" : L"ні", FormatBytes(g.streamer->BytesSent()).c_str());
     SetText(IDC_STATS, buf);
     if (g.relay && !g.relay->Connected()) {
         const std::string err = g.relay->LastError();
