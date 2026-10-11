@@ -26,8 +26,8 @@ function manifest(room) {
     theme_color: "#000000",
     lang: "uk",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+      { src: "/icon-192-v3.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+      { src: "/icon-512-v3.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
     ],
   });
 }
@@ -105,8 +105,9 @@ export default {
 
     const mf = url.pathname.match(/^\/r\/([a-z0-9]{8,32})\/manifest\.webmanifest$/);
     if (mf) return new Response(manifest(mf[1]), { headers: { "Content-Type": "application/manifest+json", "Cache-Control": "no-store" } });
-    if (url.pathname === "/icon-192.png") return png(ICON_192);
-    if (url.pathname === "/icon-512.png") return png(ICON_512);
+    // Versioned names: phones cache icons hard, a new file name makes them fetch the new picture.
+    if (/^\/icon-192(-v\d+)?\.png$/.test(url.pathname)) return png(ICON_192);
+    if (/^\/icon-512(-v\d+)?\.png$/.test(url.pathname)) return png(ICON_512);
     if (url.pathname === "/sw.js") return new Response(SW_JS, { headers: { "Content-Type": "text/javascript", "Cache-Control": "no-store" } });
 
     const page = url.pathname.match(/^\/r\/([a-z0-9]{8,32})\/?$/);
