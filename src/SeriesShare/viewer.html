@@ -32,7 +32,7 @@
 <div id="overlay">
   <div class="spin" id="spin"></div>
   <div id="status">Підключення до трансляції…</div>
-  <button id="go" hidden>▶ Дивитися зі звуком</button>
+  <button id="go" hidden>▶ Дивитися</button>
   <button id="install" class="sec" hidden>📲 Встановити як застосунок</button>
 </div>
 <div id="hint" hidden>🔇 Торкніться екрана, щоб увімкнути звук</div>
@@ -70,14 +70,23 @@ installBtn.onclick = async () => { if (!installEvt) return; installEvt.prompt();
 
 // Sound on by default. The installed app may autoplay with sound; a plain browser tab may refuse it,
 // then the picture starts muted and the first touch anywhere turns the sound on.
+// If the phone refuses to start the video at all (battery or data saver), a big "Watch" button appears.
 function playWithSound() {
   v.muted = false;
-  v.play().then(() => { hint.hidden = true; }).catch(() => {
-    v.muted = true; v.play().catch(() => {});
-    hint.hidden = false;
+  v.play().then(() => { hint.hidden = true; go.hidden = true; }).catch(() => {
+    v.muted = true;
+    v.play().then(() => { hint.hidden = false; }).catch(() => { show("Трансляція йде", false, true); });
   });
 }
-addEventListener("pointerdown", () => { if (v.muted && pc && pc.connectionState === "connected") { v.muted = false; v.play().catch(() => {}); hint.hidden = true; } }, true);
+const live = () => pc && pc.connectionState === "connected";
+// Any touch starts a stopped picture and turns the sound on (a touch always allows both)
+addEventListener("pointerdown", () => {
+  if (!live()) return;
+  if (v.paused || v.muted) { v.muted = false; v.play().then(() => { hint.hidden = true; go.hidden = true; overlay.classList.add("hidden"); }).catch(() => {}); }
+}, true);
+// The browser may stop the video by itself (screen off, app switch): start it again when possible
+v.addEventListener("pause", () => { if (live() && !document.hidden) v.play().catch(() => show("Трансляція йде", false, true)); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && live() && v.paused) v.play().catch(() => show("Трансляція йде", false, true)); });
 
 async function waitIce(pc) {
   if (pc.iceGatheringState === "complete") return;

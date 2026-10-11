@@ -345,11 +345,15 @@ void VideoCapture::EncoderLoop()
         return true;
     };
 
+    // After a key frame request the last picture is fed at the full frame rate for a while: the encoder
+    // only emits output after ~20 input frames, which at the paused 2 fps would take ten seconds.
+    auto boostUntil = std::chrono::steady_clock::now();
     while (m_running) {
         bool haveFrame = false;
         {
             std::unique_lock<std::mutex> lock(m_mutex);
-            m_cv.wait_for(lock, std::chrono::milliseconds(200), [this] { return !m_running || m_hasPending || m_keyRequested; });
+            const bool boost = std::chrono::steady_clock::now() < boostUntil;
+            m_cv.wait_for(lock, boost ? interval : std::chrono::microseconds(200000), [this] { return !m_running || m_hasPending || m_keyRequested; });
             if (!m_running) {
                 break;
             }
@@ -360,8 +364,11 @@ void VideoCapture::EncoderLoop()
                 ft = m_pendingTime;
                 m_hasPending = false;
                 haveFrame = true;
-            } else if (m_keyRequested && !m_last.empty()) {
-                // nothing new on screen (paused): re-send the last picture as a key frame
+            } else if (!m_last.empty() && (m_keyRequested || std::chrono::steady_clock::now() - lastEncode >=
+                                           (std::chrono::steady_clock::now() < boostUntil ? std::chrono::duration_cast<std::chrono::microseconds>(interval) : std::chrono::microseconds(500000)))) {
+                // Nothing new on screen (paused): repeat the last picture (twice a second, or at full rate
+                // right after a key frame request) so the encoder keeps producing output and a viewer joining
+                // during a pause gets the picture. Repeated frames cost almost nothing.
                 frame = m_last;
                 fw = m_lastW;
                 fh = m_lastH;
@@ -388,8 +395,9 @@ void VideoCapture::EncoderLoop()
             m_keyRequested = true;
         }
         const bool forceKey = m_keyRequested.exchange(false);
-        if (forceKey && d.codec) {
-            SetCodecUInt(d.codec.Get(), CODECAPI_AVEncVideoForceKeyFrame, 1);
+        if (forceKey) {
+            if (d.codec) SetCodecUInt(d.codec.Get(), CODECAPI_AVEncVideoForceKeyFrame, 1);
+            boostUntil = std::chrono::steady_clock::now() + std::chrono::seconds(2);
         }
 
         ComPtr<IMFSample> sample;
