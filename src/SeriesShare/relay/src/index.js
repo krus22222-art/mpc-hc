@@ -9,6 +9,36 @@
 //   POST /answer?room=<room>&id=<id>   viewer sends its answer (SDP body)  -> 204
 
 import { VIEWER_HTML } from "./viewer.js";
+import { ICON_192, ICON_512 } from "./icons.js";
+
+// Installable web app: "Наше кіно" on the viewer's home screen opens straight into the room.
+function manifest(room) {
+  return JSON.stringify({
+    name: "Наше кіно",
+    short_name: "Наше кіно",
+    description: "Спільний перегляд з MPC-HC",
+    id: `/r/${room}`,
+    start_url: `/r/${room}`,
+    scope: `/r/${room}`,
+    display: "standalone",
+    orientation: "any",
+    background_color: "#000000",
+    theme_color: "#000000",
+    lang: "uk",
+    icons: [
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+    ],
+  });
+}
+// The service worker only makes the page installable; it never caches (the stream is live).
+const SW_JS = "self.addEventListener(\"install\", () => self.skipWaiting());\nself.addEventListener(\"activate\", (e) => e.waitUntil(self.clients.claim()));\nself.addEventListener(\"fetch\", () => {});\n";
+
+function png(b64) {
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Response(bytes, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" } });
+}
 
 const ROOM_RE = /^[a-z0-9]{8,32}$/;
 const STUN_ONLY = [{ urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] }];
@@ -72,6 +102,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors() });
+
+    const mf = url.pathname.match(/^\/r\/([a-z0-9]{8,32})\/manifest\.webmanifest$/);
+    if (mf) return new Response(manifest(mf[1]), { headers: { "Content-Type": "application/manifest+json", "Cache-Control": "no-store" } });
+    if (url.pathname === "/icon-192.png") return png(ICON_192);
+    if (url.pathname === "/icon-512.png") return png(ICON_512);
+    if (url.pathname === "/sw.js") return new Response(SW_JS, { headers: { "Content-Type": "text/javascript", "Cache-Control": "no-store" } });
 
     const page = url.pathname.match(/^\/r\/([a-z0-9]{8,32})\/?$/);
     if (page && request.method === "GET") {
