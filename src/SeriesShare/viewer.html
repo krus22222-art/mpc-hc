@@ -159,7 +159,11 @@ async function keepAwake() {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && pc && pc.connectionState === "connected") keepAwake(); });
 v.addEventListener("playing", keepAwake);
 
-go.onclick = () => { v.muted = false; v.play(); overlay.classList.add("hidden"); updateSoundButton(); keepAwake(); };
+// Closing the page closes the connection right away (DTLS close), so the player's viewer count drops at once
+// instead of after the ICE consent timeout.
+window.addEventListener("pagehide", () => { clearTimeout(retryTimer); clearTimeout(stallTimer); if (pc) { pc.onconnectionstatechange = null; try { pc.close(); } catch (e) {} } });
+
+go.onclick =() => { v.muted = false; v.play(); overlay.classList.add("hidden"); updateSoundButton(); keepAwake(); };
 sndBtn.onclick = () => { v.muted = !v.muted; if (!v.muted) v.play(); updateSoundButton(); };
 fsBtn.onclick = () => {
   const el = document.documentElement;
