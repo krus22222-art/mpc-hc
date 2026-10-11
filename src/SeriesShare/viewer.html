@@ -20,6 +20,7 @@
   button { font: inherit; font-size: 20px; padding: 16px 30px; border-radius: 14px; border: 0; background: #4c8dff; color: #fff; cursor: pointer; }
   #bar { position: fixed; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px; opacity: .85; transition: opacity .4s; }
   #bar.idle { opacity: 0; pointer-events: none; }
+  #hint { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 12px; background: rgba(30,30,38,.88); font-size: 16px; white-space: nowrap; }
   button.sec { font-size: 16px; padding: 12px 22px; background: rgba(60,60,72,.9); }
   #bar button { font-size: 15px; padding: 10px 16px; background: rgba(40,40,48,.85); }
   .spin { width: 42px; height: 42px; border: 4px solid #555; border-top-color: #4c8dff; border-radius: 50%; animation: s 1s linear infinite; }
@@ -34,16 +35,15 @@
   <button id="go" hidden>▶ Дивитися зі звуком</button>
   <button id="install" class="sec" hidden>📲 Встановити як застосунок</button>
 </div>
+<div id="hint" hidden>🔇 Торкніться екрана, щоб увімкнути звук</div>
 <div id="bar" hidden>
   <button id="fs">⛶ На весь екран</button>
-  <button id="fill">↔ Заповнити екран</button>
-  <button id="snd">🔇 Увімкнути звук</button>
 </div>
 <script>
 "use strict";
 const v = document.getElementById("v"), overlay = document.getElementById("overlay"), statusEl = document.getElementById("status"),
       go = document.getElementById("go"), spin = document.getElementById("spin"), bar = document.getElementById("bar"),
-      fsBtn = document.getElementById("fs"), sndBtn = document.getElementById("snd");
+      fsBtn = document.getElementById("fs"), hint = document.getElementById("hint");
 // Signaling endpoint: same origin by default (local test), or ?api=https://... (relay server)
 const params = new URLSearchParams(location.search);
 const api = (params.get("api") || "").replace(/\/$/, "");
@@ -67,7 +67,16 @@ window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); instal
 window.addEventListener("appinstalled", () => { installBtn.hidden = true; installEvt = null; });
 installBtn.onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; installBtn.hidden = true; };
 
-function updateSoundButton() { sndBtn.textContent = v.muted ? "🔇 Увімкнути звук" : "🔊 Вимкнути звук"; }
+// Sound on by default. The installed app may autoplay with sound; a plain browser tab may refuse it,
+// then the picture starts muted and the first touch anywhere turns the sound on.
+function playWithSound() {
+  v.muted = false;
+  v.play().then(() => { hint.hidden = true; }).catch(() => {
+    v.muted = true; v.play().catch(() => {});
+    hint.hidden = false;
+  });
+}
+addEventListener("pointerdown", () => { if (v.muted && pc && pc.connectionState === "connected") { v.muted = false; v.play().catch(() => {}); hint.hidden = true; } }, true);
 
 async function waitIce(pc) {
   if (pc.iceGatheringState === "complete") return;
@@ -158,7 +167,7 @@ async function connect() {
       const s = pc.connectionState;
       if (s === "connected") { clearTimeout(stallTimer); diag.states.push("connected@" + (Date.now() - diag.t0)); }
       if (s === "failed") sendDiag("failed");
-      if (s === "connected") { overlay.classList.add("hidden"); bar.hidden = false; v.play().catch(() => {}); if (v.muted) show("Трансляція йде. Торкніться, щоб увімкнути звук.", false, true); }
+      if (s === "connected") { overlay.classList.add("hidden"); bar.hidden = false; playWithSound(); keepAwake(); }
       if (s === "failed" || s === "disconnected" || s === "closed") { bar.hidden = true; show("З'єднання втрачено. Повторне підключення…", true, false); retryTimer = setTimeout(connect, 2500); }
     };
     await pc.setRemoteDescription({ type: "offer", sdp });
@@ -188,10 +197,10 @@ window.addEventListener("pagehide", () => { clearTimeout(retryTimer); clearTimeo
 // --- Picture fitting -------------------------------------------------------------------------------
 // The stream is the player's whole video area, so letterbox bars are part of the picture. Find the
 // non-black content box from time to time and scale that box (not the whole frame) to the screen.
-// "Fill" mode scales it to cover the screen (edges cropped, no bars at all). Double tap toggles.
-const fillBtn = document.getElementById("fill");
-let fillMode = false, box = null, pendingBox = null, pendingCount = 0;
-try { fillMode = localStorage.getItem("fill") === "1"; } catch (e) {}
+// In fullscreen held landscape the picture covers the whole screen (edges cropped, no bars); held
+// upright it is shown whole. The viewer turns the phone as she likes, nothing to switch.
+let box = null, pendingBox = null, pendingCount = 0;
+const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 const probe = document.createElement("canvas"), pctx = probe.getContext("2d", { willReadFrequently: true });
 function detectBox() {
   const vw = v.videoWidth, vh = v.videoHeight;
@@ -218,11 +227,12 @@ function layoutVideo() {
   const vw = v.videoWidth, vh = v.videoHeight, W = innerWidth, H = innerHeight;
   if (!vw || !vh) return;
   const b = box || { x: 0, y: 0, w: vw, h: vh };
-  const k = fillMode ? Math.max(W / b.w, H / b.h) : Math.min(W / b.w, H / b.h);
+  const cover = isFull() && W >= H;
+  const k = cover ? Math.max(W / b.w, H / b.h) : Math.min(W / b.w, H / b.h);
   v.classList.add("fit");
   Object.assign(v.style, { width: vw * k + "px", height: vh * k + "px",
     left: (W - b.w * k) / 2 - b.x * k + "px", top: (H - b.h * k) / 2 - b.y * k + "px" });
-  fillBtn.textContent = fillMode ? "⤢ Показати повністю" : "↔ Заповнити екран";
+  fsBtn.textContent = isFull() ? "✕ Звичайний режим" : "⛶ На весь екран";
 }
 setInterval(() => {
   if (!pc || pc.connectionState !== "connected") return;
@@ -237,25 +247,23 @@ setInterval(() => {
 v.addEventListener("resize", () => { box = null; layoutVideo(); });
 v.addEventListener("loadedmetadata", layoutVideo);
 addEventListener("resize", layoutVideo);
-function toggleFill() { fillMode = !fillMode; try { localStorage.setItem("fill", fillMode ? "1" : "0"); } catch (e) {} layoutVideo(); }
-fillBtn.onclick = toggleFill;
-v.addEventListener("dblclick", toggleFill);
+document.addEventListener("fullscreenchange", layoutVideo);
+document.addEventListener("webkitfullscreenchange", layoutVideo);
+if (screen.orientation) screen.orientation.addEventListener("change", () => setTimeout(layoutVideo, 150));
+v.addEventListener("dblclick", () => fsBtn.onclick());
 // Buttons fade out while watching; a tap brings them back
 let idleTimer = null;
 function wake() { bar.classList.remove("idle"); clearTimeout(idleTimer); idleTimer = setTimeout(() => bar.classList.add("idle"), 4000); }
 ["pointerdown", "pointermove", "keydown"].forEach(e => addEventListener(e, wake, { passive: true }));
 wake();
 
-go.onclick = () => { v.muted = false; v.play(); overlay.classList.add("hidden"); updateSoundButton(); keepAwake(); };
-sndBtn.onclick = () => { v.muted = !v.muted; if (!v.muted) v.play(); updateSoundButton(); };
+go.onclick = () => { playWithSound(); overlay.classList.add("hidden"); keepAwake(); };
+// One button: fullscreen. The phone may be turned either way; no orientation lock.
 fsBtn.onclick = () => {
   const el = document.documentElement;
-  if (document.fullscreenElement) { document.exitFullscreen(); try { screen.orientation.unlock(); } catch (e) {} }
-  else if (el.requestFullscreen) el.requestFullscreen().then(() => {
-    // Android: turn the picture landscape in fullscreen (ignored where unsupported)
-    if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(() => {});
-  }).catch(() => {});
-  else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iPhone/iPad Safari
+  if (isFull()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+  else if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iPhone Safari
 };
 connect();
 </script>
