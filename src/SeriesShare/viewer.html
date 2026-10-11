@@ -12,12 +12,14 @@
   :root { color-scheme: dark; }
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: #000; color: #eee; font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
-  video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  video { position: fixed; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  video.fit { object-fit: fill; }  /* geometry set by layoutVideo() */
   #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; background: rgba(0,0,0,.55); }
   #overlay.hidden { display: none; }
   #status { font-size: 18px; max-width: 520px; white-space: pre-line; }
   button { font: inherit; font-size: 20px; padding: 16px 30px; border-radius: 14px; border: 0; background: #4c8dff; color: #fff; cursor: pointer; }
-  #bar { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 10px; opacity: .85; }
+  #bar { position: fixed; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px; opacity: .85; transition: opacity .4s; }
+  #bar.idle { opacity: 0; pointer-events: none; }
   button.sec { font-size: 16px; padding: 12px 22px; background: rgba(60,60,72,.9); }
   #bar button { font-size: 15px; padding: 10px 16px; background: rgba(40,40,48,.85); }
   .spin { width: 42px; height: 42px; border: 4px solid #555; border-top-color: #4c8dff; border-radius: 50%; animation: s 1s linear infinite; }
@@ -34,6 +36,7 @@
 </div>
 <div id="bar" hidden>
   <button id="fs">⛶ На весь екран</button>
+  <button id="fill">↔ Заповнити екран</button>
   <button id="snd">🔇 Увімкнути звук</button>
 </div>
 <script>
@@ -182,7 +185,68 @@ v.addEventListener("playing", keepAwake);
 // instead of after the ICE consent timeout.
 window.addEventListener("pagehide", () => { clearTimeout(retryTimer); clearTimeout(stallTimer); if (pc) { pc.onconnectionstatechange = null; try { pc.close(); } catch (e) {} } });
 
-go.onclick =() => { v.muted = false; v.play(); overlay.classList.add("hidden"); updateSoundButton(); keepAwake(); };
+// --- Picture fitting -------------------------------------------------------------------------------
+// The stream is the player's whole video area, so letterbox bars are part of the picture. Find the
+// non-black content box from time to time and scale that box (not the whole frame) to the screen.
+// "Fill" mode scales it to cover the screen (edges cropped, no bars at all). Double tap toggles.
+const fillBtn = document.getElementById("fill");
+let fillMode = false, box = null, pendingBox = null, pendingCount = 0;
+try { fillMode = localStorage.getItem("fill") === "1"; } catch (e) {}
+const probe = document.createElement("canvas"), pctx = probe.getContext("2d", { willReadFrequently: true });
+function detectBox() {
+  const vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh || v.readyState < 2) return null;
+  const W = 160, H = Math.max(1, Math.round(W * vh / vw));
+  probe.width = W; probe.height = H;
+  pctx.drawImage(v, 0, 0, W, H);
+  const d = pctx.getImageData(0, 0, W, H).data;
+  const bright = (x, y) => { const i = (y * W + x) * 4; return d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11 > 28; };
+  const rowLit = y => { let n = 0; for (let x = 0; x < W; x++) if (bright(x, y)) n++; return n > W * 0.02; };
+  const colLit = (x, y0, y1) => { let n = 0; for (let y = y0; y <= y1; y++) if (bright(x, y)) n++; return n > (y1 - y0 + 1) * 0.02; };
+  let top = 0, bottom = H - 1, left = 0, right = W - 1;
+  while (top < bottom && !rowLit(top)) top++;
+  while (bottom > top && !rowLit(bottom)) bottom--;
+  while (left < right && !colLit(left, top, bottom)) left++;
+  while (right > left && !colLit(right, top, bottom)) right--;
+  if ((right - left + 1) * (bottom - top + 1) < W * H * 0.3) return null;  // dark scene: keep the previous box
+  const sx = vw / W, sy = vh / H, pad = 1;
+  return { x: Math.max(0, (left + pad) * sx), y: Math.max(0, (top + pad) * sy),
+           w: Math.min(vw, (right - left + 1 - 2 * pad) * sx), h: Math.min(vh, (bottom - top + 1 - 2 * pad) * sy) };
+}
+function sameBox(a, b) { return a && b && Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.w - b.w) + Math.abs(a.h - b.h) < (a.w + a.h) * 0.02; }
+function layoutVideo() {
+  const vw = v.videoWidth, vh = v.videoHeight, W = innerWidth, H = innerHeight;
+  if (!vw || !vh) return;
+  const b = box || { x: 0, y: 0, w: vw, h: vh };
+  const k = fillMode ? Math.max(W / b.w, H / b.h) : Math.min(W / b.w, H / b.h);
+  v.classList.add("fit");
+  Object.assign(v.style, { width: vw * k + "px", height: vh * k + "px",
+    left: (W - b.w * k) / 2 - b.x * k + "px", top: (H - b.h * k) / 2 - b.y * k + "px" });
+  fillBtn.textContent = fillMode ? "⤢ Показати повністю" : "↔ Заповнити екран";
+}
+setInterval(() => {
+  if (!pc || pc.connectionState !== "connected") return;
+  let nb = null;
+  try { nb = detectBox(); } catch (e) { return; }
+  if (!nb) return;
+  // Change only after the same box is seen twice in a row (subtitles or a flash do not shake the picture)
+  if (sameBox(nb, box)) { pendingCount = 0; return; }
+  if (sameBox(nb, pendingBox)) pendingCount++; else { pendingBox = nb; pendingCount = 1; }
+  if (pendingCount >= 2) { box = nb; pendingCount = 0; layoutVideo(); }
+}, 1500);
+v.addEventListener("resize", () => { box = null; layoutVideo(); });
+v.addEventListener("loadedmetadata", layoutVideo);
+addEventListener("resize", layoutVideo);
+function toggleFill() { fillMode = !fillMode; try { localStorage.setItem("fill", fillMode ? "1" : "0"); } catch (e) {} layoutVideo(); }
+fillBtn.onclick = toggleFill;
+v.addEventListener("dblclick", toggleFill);
+// Buttons fade out while watching; a tap brings them back
+let idleTimer = null;
+function wake() { bar.classList.remove("idle"); clearTimeout(idleTimer); idleTimer = setTimeout(() => bar.classList.add("idle"), 4000); }
+["pointerdown", "pointermove", "keydown"].forEach(e => addEventListener(e, wake, { passive: true }));
+wake();
+
+go.onclick = () => { v.muted = false; v.play(); overlay.classList.add("hidden"); updateSoundButton(); keepAwake(); };
 sndBtn.onclick = () => { v.muted = !v.muted; if (!v.muted) v.play(); updateSoundButton(); };
 fsBtn.onclick = () => {
   const el = document.documentElement;
