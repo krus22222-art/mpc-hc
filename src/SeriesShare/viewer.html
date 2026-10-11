@@ -167,9 +167,10 @@ window.addEventListener("pagehide", () => { clearTimeout(retryTimer); clearTimeo
 // --- Picture fitting -------------------------------------------------------------------------------
 // The stream is the player's whole video area, so letterbox bars are part of the picture. Find the
 // non-black content box from time to time and scale that box (not the whole frame) to the screen.
-// In fullscreen held landscape the picture covers the whole screen (edges cropped, no bars); held
-// upright it is shown whole. The viewer turns the phone as she likes, nothing to switch.
-let box = null, pendingBox = null, pendingCount = 0;
+// The whole picture is always shown (like YouTube and Netflix): bars baked into the stream are cut away,
+// only the screen/film shape difference may leave thin bars. In fullscreen a double tap zooms to fill the
+// screen (edges cropped), another double tap shows the whole picture again.
+let box = null, pendingBox = null, pendingCount = 0, zoom = false;
 const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 const probe = document.createElement("canvas"), pctx = probe.getContext("2d", { willReadFrequently: true });
 function detectBox() {
@@ -188,16 +189,18 @@ function detectBox() {
   while (left < right && !colLit(left, top, bottom)) left++;
   while (right > left && !colLit(right, top, bottom)) right--;
   if ((right - left + 1) * (bottom - top + 1) < W * H * 0.3) return null;  // dark scene: keep the previous box
-  const sx = vw / W, sy = vh / H, pad = 1;
-  return { x: Math.max(0, (left + pad) * sx), y: Math.max(0, (top + pad) * sy),
-           w: Math.min(vw, (right - left + 1 - 2 * pad) * sx), h: Math.min(vh, (bottom - top + 1 - 2 * pad) * sy) };
+  // Letterbox/pillarbox bars are always symmetric: take the smaller side on each axis, so a dark edge of
+  // the picture itself is never cut off.
+  const barY = Math.min(top, H - 1 - bottom), barX = Math.min(left, W - 1 - right);
+  const sx = vw / W, sy = vh / H;
+  return { x: barX * sx, y: barY * sy, w: vw - 2 * barX * sx, h: vh - 2 * barY * sy };
 }
 function sameBox(a, b) { return a && b && Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.w - b.w) + Math.abs(a.h - b.h) < (a.w + a.h) * 0.02; }
 function layoutVideo() {
   const vw = v.videoWidth, vh = v.videoHeight, W = innerWidth, H = innerHeight;
   if (!vw || !vh) return;
   const b = box || { x: 0, y: 0, w: vw, h: vh };
-  const cover = isFull() && W >= H;
+  const cover = zoom && isFull();
   const k = cover ? Math.max(W / b.w, H / b.h) : Math.min(W / b.w, H / b.h);
   v.classList.add("fit");
   Object.assign(v.style, { width: vw * k + "px", height: vh * k + "px",
@@ -220,7 +223,8 @@ addEventListener("resize", layoutVideo);
 document.addEventListener("fullscreenchange", layoutVideo);
 document.addEventListener("webkitfullscreenchange", layoutVideo);
 if (screen.orientation) screen.orientation.addEventListener("change", () => setTimeout(layoutVideo, 150));
-v.addEventListener("dblclick", () => fsBtn.onclick());
+document.addEventListener("fullscreenchange", () => { if (!isFull()) zoom = false; layoutVideo(); });
+addEventListener("dblclick", e => { if (e.target.closest("button")) return; if (isFull()) { zoom = !zoom; layoutVideo(); } else fsBtn.onclick(); });
 // Buttons fade out while watching; a tap brings them back
 let idleTimer = null;
 function wake() { bar.classList.remove("idle"); clearTimeout(idleTimer); idleTimer = setTimeout(() => bar.classList.add("idle"), 4000); }
