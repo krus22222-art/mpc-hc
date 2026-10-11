@@ -85,10 +85,19 @@ async function connect() {
   show("Підключення до трансляції…", true, false);
   try {
     const q = room ? "?room=" + encodeURIComponent(room) : "";
-    const r = await fetch(api + "/offer" + q, { method: "POST", cache: "no-store" });
-    if (r.status === 404 || r.status === 410) { show("Трансляцію ще не запущено або вже завершено. Сторінка оновиться сама.", true, false); retryTimer = setTimeout(connect, 4000); return; }
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const { id, sdp } = await r.json();
+    // Through the relay server the media always goes via Cloudflare TURN on both sides: a direct path between
+    // countries is often filtered and only costs time. Right after the player starts it may not have its TURN
+    // credentials yet; its offer then has no relay candidate, so ask again shortly.
+    const viaRelay = !!room && !params.has("direct");
+    let r, id, sdp;
+    for (let attempt = 0; ; attempt++) {
+      r = await fetch(api + "/offer" + q, { method: "POST", cache: "no-store" });
+      if (r.status === 404 || r.status === 410) { show("Трансляцію ще не запущено або вже завершено. Сторінка оновиться сама.", true, false); retryTimer = setTimeout(connect, 4000); return; }
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      ({ id, sdp } = await r.json());
+      if (!viaRelay || / typ relay/.test(sdp) || attempt >= 4) break;
+      await new Promise(res => setTimeout(res, 1500));
+    }
     diag.remoteSdp = (sdp.match(/^a=candidate:.*$/gm) || []).map(l => { const p = l.split(' '); return p[2] + '/' + p[7] + '/' + (p[4].includes(':') ? 'v6' : 'v4'); });
     // TURN relay credentials (for networks where a direct path is impossible); STUN-only fallback
     let ice = ICE;
@@ -96,8 +105,9 @@ async function connect() {
       const ir = await fetch(api + "/ice" + q, { cache: "no-store" });
       if (ir.ok) { const j = await ir.json(); if (j.iceServers && j.iceServers.length) ice = j.iceServers; }
     } catch (e) {}
-    // ?relay=1 forces the TURN path (diagnostics: behaves like a network without a direct route)
-    pc = new RTCPeerConnection({ iceServers: ice, iceTransportPolicy: params.has("relay") ? "relay" : "all" });
+    const hasTurn = ice.some(s => [].concat(s.urls).some(u => u.startsWith("turn")));
+    // ?direct=1 allows direct paths again (diagnostics)
+    pc = new RTCPeerConnection({ iceServers: ice, iceTransportPolicy: (viaRelay && hasTurn) || params.has("relay") ? "relay" : "all" });
     const stream = new MediaStream();
     v.srcObject = stream;
     pc.ontrack = e => { stream.addTrack(e.track); };
@@ -114,14 +124,14 @@ async function connect() {
         diag.snapshot = { stats: st.size, pairs: pairs.slice(0, 30), remoteCands: [...new Set(Object.entries(cand).filter(([id]) => st.get(id) && st.get(id).type === "remote-candidate").map(([, v]) => v))] };
       } catch (e) { diag.snapshot = { error: String(e) }; }
     }, 8000);
-    // Still not connected after 25 s: report and start over
+    // Still not connected after 15 s: report and start over
     stallTimer = setTimeout(async () => {
       if (pc && pc.connectionState !== "connected") {
         await sendDiag("stalled");
         show("Не вдається з'єднатися з трансляцією. Пробую ще раз…", true, false);
         connect();
       }
-    }, 25000);
+    }, 15000);
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
       if (s === "connected") { clearTimeout(stallTimer); diag.states.push("connected@" + (Date.now() - diag.t0)); }
