@@ -84,34 +84,10 @@ async function waitIce(pc) {
     pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") { clearTimeout(t); r(); } }); });
 }
 
-// Connection diagnostics for the relay (no addresses, only states, candidate types and ICE errors),
-// sent once per attempt when it fails or stalls, so a broken network path can be told apart remotely.
-let diag = null;
-function newDiag() { diag = { t0: Date.now(), sent: false, errors: [], states: [] }; }
-async function sendDiag(reason) {
-  if (!api && !room || !diag || diag.sent || !pc) return;
-  diag.sent = true;
-  const d = { reason, ua: navigator.userAgent, ms: Date.now() - diag.t0, conn: pc.connectionState, ice: pc.iceConnectionState,
-              gathering: pc.iceGatheringState, states: diag.states, errors: diag.errors.slice(0, 12), local: {}, remote: {}, pairs: {} };
-  try {
-    (await pc.getStats()).forEach(r => {
-      if (r.type === "local-candidate") { const k = r.candidateType + (r.relayProtocol ? "/" + r.relayProtocol : "") + "/" + r.protocol; d.local[k] = (d.local[k] || 0) + 1; }
-      if (r.type === "remote-candidate") { const k = r.candidateType + "/" + r.protocol; d.remote[k] = (d.remote[k] || 0) + 1; }
-      if (r.type === "candidate-pair") { d.pairs[r.state] = (d.pairs[r.state] || 0) + 1; if (r.nominated) d.nominated = r.state; }
-      if (r.type === "transport") d.dtls = r.dtlsState;
-    });
-  } catch (e) {}
-  d.snapshot = diag.snapshot;  // taken mid-attempt: the browser drops its candidate pairs once ICE fails
-  d.remoteSdp = diag.remoteSdp;
-
-  try { await fetch(api + "/diag?room=" + encodeURIComponent(room), { method: "POST", body: JSON.stringify(d), keepalive: true }); } catch (e) {}
-}
-
 let pc = null, retryTimer = null, stallTimer = null, offline = false;
 async function connect() {
   clearTimeout(retryTimer); clearTimeout(stallTimer);
-  if (pc) { await sendDiag("retry"); try { pc.close(); } catch (e) {} }
-  newDiag();
+  if (pc) { try { pc.close(); } catch (e) {} }
   if (!offline) show("Підключення до трансляції…", true, false);  // no flicker while waiting for the stream to start
   try {
     const q = room ? "?room=" + encodeURIComponent(room) : "";
@@ -129,7 +105,6 @@ async function connect() {
       if (!viaRelay || / typ relay/.test(sdp) || attempt >= 4) break;
       await new Promise(res => setTimeout(res, 1500));
     }
-    diag.remoteSdp = (sdp.match(/^a=candidate:.*$/gm) || []).map(l => { const p = l.split(' '); return p[2] + '/' + p[7] + '/' + (p[4].includes(':') ? 'v6' : 'v4'); });
     // TURN relay credentials (for networks where a direct path is impossible); STUN-only fallback
     let ice = ICE;
     try {
@@ -142,31 +117,16 @@ async function connect() {
     const stream = new MediaStream();
     v.srcObject = stream;
     pc.ontrack = e => { stream.addTrack(e.track); };
-    pc.onicecandidateerror = e => { diag.errors.push({ url: e.url, code: e.errorCode, text: e.errorText }); };
-    pc.oniceconnectionstatechange = () => { diag.states.push(pc.iceConnectionState + "@" + (Date.now() - diag.t0)); };
-    // Detailed view of the checks 8 s into the attempt (address family only, never the addresses themselves)
-    const fam = a => !a ? "?" : a.endsWith(".local") ? "mdns" : a.includes(":") ? "v6" : "v4";
-    setTimeout(async () => {
-      if (!pc || pc.connectionState === "connected" || !diag) return;
-      try {
-        const st = await pc.getStats(), cand = {}, pairs = [];
-        st.forEach(r => { if (r.type === "local-candidate" || r.type === "remote-candidate") cand[r.id] = r.candidateType + "/" + (r.relayProtocol || r.protocol) + "/" + fam(r.address); });
-        st.forEach(r => { if (r.type === "candidate-pair") pairs.push([cand[r.localCandidateId], cand[r.remoteCandidateId], r.state, r.requestsSent, r.responsesReceived, r.requestsReceived].join(" ")); });
-        diag.snapshot = { stats: st.size, pairs: pairs.slice(0, 30), remoteCands: [...new Set(Object.entries(cand).filter(([id]) => st.get(id) && st.get(id).type === "remote-candidate").map(([, v]) => v))] };
-      } catch (e) { diag.snapshot = { error: String(e) }; }
-    }, 8000);
-    // Still not connected after 15 s: report and start over
+    // Still not connected after 15 s: start over
     stallTimer = setTimeout(async () => {
       if (pc && pc.connectionState !== "connected") {
-        await sendDiag("stalled");
         show("Не вдається з'єднатися з трансляцією. Пробую ще раз…", true, false);
         connect();
       }
     }, 15000);
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
-      if (s === "connected") { clearTimeout(stallTimer); diag.states.push("connected@" + (Date.now() - diag.t0)); }
-      if (s === "failed") sendDiag("failed");
+      if (s === "connected") clearTimeout(stallTimer);
       if (s === "connected") { overlay.classList.add("hidden"); bar.hidden = false; playWithSound(); keepAwake(); }
       if (s === "failed" || s === "disconnected" || s === "closed") { bar.hidden = true; show("З'єднання втрачено. Повторне підключення…", true, false); retryTimer = setTimeout(connect, 2500); }
     };

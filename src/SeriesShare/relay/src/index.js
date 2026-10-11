@@ -122,7 +122,7 @@ export default {
       });
     }
 
-    if (url.pathname === "/host" || url.pathname === "/offer" || url.pathname === "/answer" || url.pathname === "/ice" || url.pathname === "/diag") {
+    if (url.pathname === "/host" || url.pathname === "/offer" || url.pathname === "/answer" || url.pathname === "/ice") {
       const room = url.searchParams.get("room") || "";
       if (!ROOM_RE.test(room)) return json({ error: "bad room" }, 400);
       const stub = env.ROOMS.get(env.ROOMS.idFromName(room));
@@ -153,7 +153,6 @@ export class Room {
       const list = await iceServers(this.env);
       return json({ iceServers: list });
     }
-    if (url.pathname === "/diag") return this.diag(request, url);
     if (url.pathname === "/offer" && request.method === "POST") return this.relay({ type: "offer" });
     if (url.pathname === "/answer" && request.method === "POST") {
       const id = url.searchParams.get("id") || "";
@@ -164,26 +163,6 @@ export class Room {
     return json({ error: "not found" }, 404);
   }
 
-  // Viewer connection reports (states, candidate types, ICE errors; no addresses). Only the room's host key can read them.
-  async diag(request, url) {
-    if (request.method === "POST") {
-      const body = await request.text();
-      if (body.length > 16 * 1024) return json({ error: "too large" }, 413);
-      let report;
-      try { report = JSON.parse(body); } catch (e) { return json({ error: "bad json" }, 400); }
-      const cf = request.cf || {};
-      report.at = new Date().toISOString();
-      report.net = { country: cf.country, as: cf.asOrganization };
-      const list = (await this.state.storage.get("diag")) || [];
-      list.push(report);
-      await this.state.storage.put("diag", list.slice(-20));
-      return new Response(null, { status: 204, headers: cors() });
-    }
-    const stored = await this.state.storage.get("key");
-    if (!stored || url.searchParams.get("key") !== stored) return json({ error: "forbidden" }, 403);
-    return json((await this.state.storage.get("diag")) || []);
-  }
-
   async acceptHost(request, url) {
     if (request.headers.get("Upgrade") !== "websocket") return json({ error: "websocket expected" }, 426);
     const key = url.searchParams.get("key") || "";
@@ -192,6 +171,7 @@ export class Room {
     const stored = await this.state.storage.get("key");
     if (stored && stored !== key) return json({ error: "room belongs to another player" }, 403);
     if (!stored) await this.state.storage.put("key", key);
+    await this.state.storage.delete("diag");  // connection reports from an earlier version are not kept
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
