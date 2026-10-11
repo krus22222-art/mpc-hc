@@ -27,11 +27,31 @@ async function iceServers(env, ttl = 6 * 3600) {
     });
     if (!r.ok) { console.warn(`TURN credentials: HTTP ${r.status}`); return STUN_ONLY; }
     const data = await r.json();
-    return data.iceServers && data.iceServers.length ? data.iceServers : STUN_ONLY;
+    if (!data.iceServers || !data.iceServers.length) return STUN_ONLY;
+    return withIpv4Turn(data.iceServers);
   } catch (e) {
     console.warn(`TURN credentials: ${e}`);
     return STUN_ONLY;
   }
+}
+
+// A viewer on an IPv6 network (many mobile operators) reaches turn.cloudflare.com over IPv6 and gets an
+// IPv6 relay address, which cannot pair with the player's IPv4-only candidates: ICE then has no pairs at
+// all. Adding the server's IPv4 address as well yields IPv4 relay candidates (via the phone's 464XLAT).
+// turns: URLs keep the hostname, since TLS needs it for the certificate check.
+const TURN_IPV4_FALLBACK = "141.101.90.1"; // turn.cloudflare.com A record (anycast)
+async function withIpv4Turn(servers) {
+  let ip = "";
+  try {
+    const r = await fetch("https://cloudflare-dns.com/dns-query?name=turn.cloudflare.com&type=A", { headers: { Accept: "application/dns-json" } });
+    const a = ((await r.json()).Answer || []).find((x) => x.type === 1);
+    ip = a ? a.data : "";
+  } catch (e) {}
+  if (!/^\d+\.\d+\.\d+\.\d+$/.test(ip)) ip = TURN_IPV4_FALLBACK;
+  return servers.flatMap((s) => {
+    const v4 = [].concat(s.urls).filter((u) => u.startsWith("turn:turn.cloudflare.com")).map((u) => u.replace("turn.cloudflare.com", ip));
+    return v4.length ? [s, { ...s, urls: v4 }] : [s];
+  });
 }
 
 function cors(headers = {}) {
@@ -65,7 +85,7 @@ export default {
       });
     }
 
-    if (url.pathname === "/host" || url.pathname === "/offer" || url.pathname === "/answer" || url.pathname === "/ice") {
+    if (url.pathname === "/host" || url.pathname === "/offer" || url.pathname === "/answer" || url.pathname === "/ice" || url.pathname === "/diag") {
       const room = url.searchParams.get("room") || "";
       if (!ROOM_RE.test(room)) return json({ error: "bad room" }, 400);
       const stub = env.ROOMS.get(env.ROOMS.idFromName(room));
@@ -96,6 +116,7 @@ export class Room {
       const list = await iceServers(this.env);
       return json({ iceServers: list });
     }
+    if (url.pathname === "/diag") return this.diag(request, url);
     if (url.pathname === "/offer" && request.method === "POST") return this.relay({ type: "offer" });
     if (url.pathname === "/answer" && request.method === "POST") {
       const id = url.searchParams.get("id") || "";
@@ -104,6 +125,26 @@ export class Room {
       return this.relay({ type: "answer", id, sdp });
     }
     return json({ error: "not found" }, 404);
+  }
+
+  // Viewer connection reports (states, candidate types, ICE errors; no addresses). Only the room's host key can read them.
+  async diag(request, url) {
+    if (request.method === "POST") {
+      const body = await request.text();
+      if (body.length > 16 * 1024) return json({ error: "too large" }, 413);
+      let report;
+      try { report = JSON.parse(body); } catch (e) { return json({ error: "bad json" }, 400); }
+      const cf = request.cf || {};
+      report.at = new Date().toISOString();
+      report.net = { country: cf.country, as: cf.asOrganization };
+      const list = (await this.state.storage.get("diag")) || [];
+      list.push(report);
+      await this.state.storage.put("diag", list.slice(-20));
+      return new Response(null, { status: 204, headers: cors() });
+    }
+    const stored = await this.state.storage.get("key");
+    if (!stored || url.searchParams.get("key") !== stored) return json({ error: "forbidden" }, 403);
+    return json((await this.state.storage.get("diag")) || []);
   }
 
   async acceptHost(request, url) {

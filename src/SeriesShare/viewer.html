@@ -54,10 +54,31 @@ async function waitIce(pc) {
     pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") { clearTimeout(t); r(); } }); });
 }
 
-let pc = null, retryTimer = null;
+// Connection diagnostics for the relay (no addresses, only states, candidate types and ICE errors),
+// sent once per attempt when it fails or stalls, so a broken network path can be told apart remotely.
+let diag = null;
+function newDiag() { diag = { t0: Date.now(), sent: false, errors: [], states: [] }; }
+async function sendDiag(reason) {
+  if (!api && !room || !diag || diag.sent || !pc) return;
+  diag.sent = true;
+  const d = { reason, ua: navigator.userAgent, ms: Date.now() - diag.t0, conn: pc.connectionState, ice: pc.iceConnectionState,
+              gathering: pc.iceGatheringState, states: diag.states, errors: diag.errors.slice(0, 12), local: {}, remote: {}, pairs: {} };
+  try {
+    (await pc.getStats()).forEach(r => {
+      if (r.type === "local-candidate") { const k = r.candidateType + (r.relayProtocol ? "/" + r.relayProtocol : "") + "/" + r.protocol; d.local[k] = (d.local[k] || 0) + 1; }
+      if (r.type === "remote-candidate") { const k = r.candidateType + "/" + r.protocol; d.remote[k] = (d.remote[k] || 0) + 1; }
+      if (r.type === "candidate-pair") { d.pairs[r.state] = (d.pairs[r.state] || 0) + 1; if (r.nominated) d.nominated = r.state; }
+      if (r.type === "transport") d.dtls = r.dtlsState;
+    });
+  } catch (e) {}
+  try { await fetch(api + "/diag?room=" + encodeURIComponent(room), { method: "POST", body: JSON.stringify(d), keepalive: true }); } catch (e) {}
+}
+
+let pc = null, retryTimer = null, stallTimer = null;
 async function connect() {
-  clearTimeout(retryTimer);
-  if (pc) { try { pc.close(); } catch (e) {} }
+  clearTimeout(retryTimer); clearTimeout(stallTimer);
+  if (pc) { await sendDiag("retry"); try { pc.close(); } catch (e) {} }
+  newDiag();
   show("Підключення до трансляції…", true, false);
   try {
     const q = room ? "?room=" + encodeURIComponent(room) : "";
@@ -76,8 +97,20 @@ async function connect() {
     const stream = new MediaStream();
     v.srcObject = stream;
     pc.ontrack = e => { stream.addTrack(e.track); };
+    pc.onicecandidateerror = e => { diag.errors.push({ url: e.url, code: e.errorCode, text: e.errorText }); };
+    pc.oniceconnectionstatechange = () => { diag.states.push(pc.iceConnectionState + "@" + (Date.now() - diag.t0)); };
+    // Still not connected after 25 s: report and start over
+    stallTimer = setTimeout(async () => {
+      if (pc && pc.connectionState !== "connected") {
+        await sendDiag("stalled");
+        show("Не вдається з'єднатися з трансляцією. Пробую ще раз…", true, false);
+        connect();
+      }
+    }, 25000);
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
+      if (s === "connected") { clearTimeout(stallTimer); diag.states.push("connected@" + (Date.now() - diag.t0)); }
+      if (s === "failed") sendDiag("failed");
       if (s === "connected") { overlay.classList.add("hidden"); bar.hidden = false; v.play().catch(() => {}); if (v.muted) show("Трансляція йде. Торкніться, щоб увімкнути звук.", false, true); }
       if (s === "failed" || s === "disconnected" || s === "closed") { bar.hidden = true; show("З'єднання втрачено. Повторне підключення…", true, false); retryTimer = setTimeout(connect, 2500); }
     };
