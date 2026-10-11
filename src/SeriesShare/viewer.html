@@ -71,6 +71,9 @@ async function sendDiag(reason) {
       if (r.type === "transport") d.dtls = r.dtlsState;
     });
   } catch (e) {}
+  d.snapshot = diag.snapshot;  // taken mid-attempt: the browser drops its candidate pairs once ICE fails
+  d.remoteSdp = diag.remoteSdp;
+
   try { await fetch(api + "/diag?room=" + encodeURIComponent(room), { method: "POST", body: JSON.stringify(d), keepalive: true }); } catch (e) {}
 }
 
@@ -86,6 +89,7 @@ async function connect() {
     if (r.status === 404 || r.status === 410) { show("Трансляцію ще не запущено або вже завершено. Сторінка оновиться сама.", true, false); retryTimer = setTimeout(connect, 4000); return; }
     if (!r.ok) throw new Error("HTTP " + r.status);
     const { id, sdp } = await r.json();
+    diag.remoteSdp = (sdp.match(/^a=candidate:.*$/gm) || []).map(l => { const p = l.split(' '); return p[2] + '/' + p[7] + '/' + (p[4].includes(':') ? 'v6' : 'v4'); });
     // TURN relay credentials (for networks where a direct path is impossible); STUN-only fallback
     let ice = ICE;
     try {
@@ -99,6 +103,17 @@ async function connect() {
     pc.ontrack = e => { stream.addTrack(e.track); };
     pc.onicecandidateerror = e => { diag.errors.push({ url: e.url, code: e.errorCode, text: e.errorText }); };
     pc.oniceconnectionstatechange = () => { diag.states.push(pc.iceConnectionState + "@" + (Date.now() - diag.t0)); };
+    // Detailed view of the checks 8 s into the attempt (address family only, never the addresses themselves)
+    const fam = a => !a ? "?" : a.endsWith(".local") ? "mdns" : a.includes(":") ? "v6" : "v4";
+    setTimeout(async () => {
+      if (!pc || pc.connectionState === "connected" || !diag) return;
+      try {
+        const st = await pc.getStats(), cand = {}, pairs = [];
+        st.forEach(r => { if (r.type === "local-candidate" || r.type === "remote-candidate") cand[r.id] = r.candidateType + "/" + (r.relayProtocol || r.protocol) + "/" + fam(r.address); });
+        st.forEach(r => { if (r.type === "candidate-pair") pairs.push([cand[r.localCandidateId], cand[r.remoteCandidateId], r.state, r.requestsSent, r.responsesReceived, r.requestsReceived].join(" ")); });
+        diag.snapshot = { stats: st.size, pairs: pairs.slice(0, 30), remoteCands: [...new Set(Object.entries(cand).filter(([id]) => st.get(id) && st.get(id).type === "remote-candidate").map(([, v]) => v))] };
+      } catch (e) { diag.snapshot = { error: String(e) }; }
+    }, 8000);
     // Still not connected after 25 s: report and start over
     stallTimer = setTimeout(async () => {
       if (pc && pc.connectionState !== "connected") {

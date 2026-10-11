@@ -168,10 +168,11 @@ export class Room {
       try { msg = JSON.parse(event.data); } catch (e) { return; }
       if (msg.type === "ping") { try { server.send('{"type":"pong"}'); } catch (e) {} return; }
       if (msg.type === "get-ice") {
-        // The player answers on its own (direct/STUN) path; the viewer relays through TURN when it has to,
-        // and a TURN relay address is reachable from anywhere, so one relayed side is enough.
-
-        try { server.send(JSON.stringify({ type: "ice", iceServers: STUN_ONLY })); } catch (e) {}
+        // The player gets TURN too: with relay candidates on both sides the media can always meet inside
+        // Cloudflare, whatever the viewer's network (CGNAT, IPv6-only, filtered UDP).
+        iceServers(this.env).then((list) => {
+          try { server.send(JSON.stringify({ type: "ice", iceServers: list })); } catch (e) {}
+        });
         return;
       }
       const p = msg.reqId && this.pending.get(msg.reqId);
