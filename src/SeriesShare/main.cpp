@@ -255,9 +255,19 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show)
         // The viewer may pause/resume playback and switch episodes (both sides see the same picture anyway)
         g.relay->onControl = [](const std::string& action) {
             // MPC-HC command IDs: ID_PLAY_PLAYPAUSE, ID_NAVIGATE_SKIPFORWARDFILE / SKIPBACKFILE (whole files,
-            // not chapters: anime episodes often have chapters)
-            const WPARAM cmd = action == "playpause" ? 889 : action == "next" ? 920 : action == "prev" ? 919 : 0;
-            if (cmd && g.player && IsWindow(g.player)) PostMessageW(g.player, WM_COMMAND, cmd, 0);
+            // not chapters: anime episodes often have chapters), ID_PLAY_SKIP_OPENING (+1:20) and
+            // ID_PLAY_SEEKBACKWARDMED / SEEKFORWARDMED sent twice (the player's arrow-key step, 5 s by default)
+            struct { const char* name; WPARAM cmd; int times; } const map[] = {
+                {"playpause", 889, 1}, {"next", 920, 1}, {"prev", 919, 1},
+                {"skipintro", 33467, 1}, {"back", 901, 2}, {"fwd", 902, 2},
+            };
+            if (!g.player || !IsWindow(g.player)) return;
+            for (const auto& m : map) {
+                if (action == m.name) {
+                    for (int i = 0; i < m.times; i++) PostMessageW(g.player, WM_COMMAND, m.cmd, 0);
+                    break;
+                }
+            }
         };
         g.relay->Start();
         g.url = Widen(g.relay->ViewerUrl());

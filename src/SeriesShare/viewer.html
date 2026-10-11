@@ -18,12 +18,12 @@
   #overlay.hidden { display: none; }
   #status { font-size: 18px; max-width: 520px; white-space: pre-line; }
   button { font: inherit; font-size: 20px; padding: 16px 30px; border-radius: 14px; border: 0; background: #4c8dff; color: #fff; cursor: pointer; }
-  #bar { position: fixed; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px; opacity: .85; transition: opacity .4s; }
+  #bar { position: fixed; left: 8px; right: 8px; bottom: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; opacity: .85; transition: opacity .4s; }
   #bar.idle { opacity: 0; pointer-events: none; }
   #hint { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 12px; background: rgba(30,30,38,.88); font-size: 16px; white-space: nowrap; }
   button.sec { font-size: 16px; padding: 12px 22px; background: rgba(60,60,72,.9); }
-  #bar button { font-size: 15px; padding: 10px 16px; background: rgba(40,40,48,.85); }
-  #bar button.rc { min-width: 48px; }
+  #bar button { font-size: 15px; padding: 10px 14px; background: rgba(40,40,48,.85); }
+  #bar button.rc { min-width: 46px; padding: 10px 10px; }
   .spin { width: 42px; height: 42px; border: 4px solid #555; border-top-color: #4c8dff; border-radius: 50%; animation: s 1s linear infinite; }
   @keyframes s { to { transform: rotate(360deg); } }
 </style>
@@ -39,8 +39,11 @@
 <div id="hint" hidden>🔇 Торкніться екрана, щоб увімкнути звук</div>
 <div id="bar" hidden>
   <button id="prev" class="rc" hidden title="Попередня серія">⏮</button>
+  <button id="back" class="rc" hidden title="Назад 10 секунд">−10с</button>
   <button id="pp" class="rc" hidden>⏯ Пауза</button>
+  <button id="fwd" class="rc" hidden title="Вперед 10 секунд">+10с</button>
   <button id="next" class="rc" hidden title="Наступна серія">⏭</button>
+  <button id="intro" class="rc" hidden title="Пропустити заставку">⏩ 1:20</button>
   <button id="fs">⛶ На весь екран</button>
 </div>
 <script>
@@ -242,12 +245,15 @@ function remote(btn, action) {
   btn.onclick = async () => {
     btn.disabled = true;
     try { await fetch(api + "/control?room=" + encodeURIComponent(room) + "&action=" + action, { method: "POST", cache: "no-store" }); } catch (e) {}
-    setTimeout(() => { btn.disabled = false; }, action === "playpause" ? 600 : 1500);
+    setTimeout(() => { btn.disabled = false; }, action === "next" || action === "prev" ? 1500 : 400);
   };
 }
 remote(document.getElementById("pp"), "playpause");
 remote(document.getElementById("prev"), "prev");
 remote(document.getElementById("next"), "next");
+remote(document.getElementById("back"), "back");
+remote(document.getElementById("fwd"), "fwd");
+remote(document.getElementById("intro"), "skipintro");
 
 go.onclick = () => { playWithSound(); overlay.classList.add("hidden"); keepAwake(); };
 // One button: fullscreen. The phone may be turned either way; no orientation lock.
