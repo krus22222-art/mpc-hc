@@ -3274,6 +3274,8 @@ void CMainFrame::GraphEventComplete()
     if (m_bRememberFilePos) {
         pMRU->UpdateCurrentFilePosition(0, true);
     }
+    // series-player: the episode that follows automatically starts from the beginning
+    m_autoAdvanceTick = GetTickCount64();
 
     if (m_fFrameSteppingActive) {
         m_fFrameSteppingActive = false;
@@ -17558,7 +17560,12 @@ bool CMainFrame::OpenMediaPrivate(CAutoPtr<OpenMediaData> pOMD)
 
             auto* pMRU = &AfxGetAppSettings().MRU;
             if (pMRU->rfe_array.GetCount()) {
-                if (!rtPos && m_bRememberFilePos) {
+                // series-player: when the previous episode has just ended and this one follows
+                // automatically (watching in a row), start from the beginning; a remembered position
+                // is used only when the episode is opened by hand
+                const bool autoAdvanced = m_autoAdvanceTick && GetTickCount64() - m_autoAdvanceTick < 15000;
+                m_autoAdvanceTick = 0;
+                if (!rtPos && m_bRememberFilePos && !autoAdvanced) {
                     rtPos = pMRU->GetCurrentFilePosition();
                     // series-player: an episode watched to 95 % or more counts as finished
                     // and starts from the beginning instead of resuming in the end credits.

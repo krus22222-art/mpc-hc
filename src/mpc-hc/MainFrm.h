@@ -1308,6 +1308,7 @@ public:
         double opening[2] = {-1, -1}, ending[2] = {-1, -1};
     } m_audioSkip;
     bool m_fileHasSkipChapters = false;
+    ULONGLONG m_autoAdvanceTick = 0;              // end of the previous file (episodes watched in a row)
     std::set<CString> m_introScanFolders;         // folders already handed to the scanner in this session
     HANDLE m_hIntroScan = nullptr;
     ULONGLONG m_introScanNextCheck = 0;
