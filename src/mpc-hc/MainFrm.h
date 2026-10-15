@@ -1301,6 +1301,20 @@ public:
     bool AutoSkipChapters(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur);
     CString m_autoSkipFile;                       // file the skipped set below belongs to
     std::set<REFERENCE_TIME> m_autoSkippedChapters; // chapter starts already skipped once
+    // Files without opening/ending chapters: segments found by mpc-introscan (audio fingerprints of the
+    // episodes in the folder), read from %LOCALAPPDATA%\MPC-HC-series-player\skip\<folder hash>.txt
+    struct AudioSkipInfo {
+        bool found = false;
+        double opening[2] = {-1, -1}, ending[2] = {-1, -1};
+    } m_audioSkip;
+    bool m_fileHasSkipChapters = false;
+    std::set<CString> m_introScanFolders;         // folders already handed to the scanner in this session
+    HANDLE m_hIntroScan = nullptr;
+    ULONGLONG m_introScanNextCheck = 0;
+    static CString IntroScanCacheFile(CString folder);
+    bool LoadAudioSkip(const CString& file);
+    void StartIntroScan(const CString& folder);
+    bool AutoSkipByAudio(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur);
     afx_msg void OnPlaySeekKey(UINT nID); // no menu item
     afx_msg void OnUpdatePlaySeek(CCmdUI* pCmdUI);
     afx_msg void OnPlayChangeRate(UINT nID);

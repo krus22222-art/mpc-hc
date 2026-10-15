@@ -22,6 +22,8 @@ New-Item -ItemType Directory $stage | Out-Null
 # Program, translations, internal LAV Filters (no debug symbols / link artefacts)
 Copy-Item $exe, (Join-Path $bin 'mpciconlib.dll') $stage
 # Shared viewing helper (built by src\SeriesShare\build-share.ps1)
+# Opening/ending detection for files without chapters (src\IntroScan\build-introscan.cmd)
+if (Test-Path (Join-Path $bin 'mpc-introscan.exe')) { Copy-Item (Join-Path $bin 'mpc-introscan.exe') $stage } else { Write-Warning 'mpc-introscan.exe not built: package without audio-based skipping' }
 if (Test-Path (Join-Path $bin 'mpc-share.exe')) { Copy-Item (Join-Path $bin 'mpc-share.exe') $stage } else { Write-Warning 'mpc-share.exe not built: package without shared viewing' }
 Copy-Item (Join-Path $bin 'Lang') (Join-Path $stage 'Lang') -Recurse
 New-Item -ItemType Directory (Join-Path $stage 'LAVFilters64') | Out-Null

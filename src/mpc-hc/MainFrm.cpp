@@ -1,4 +1,4 @@
-/*
+﻿/*
  * (C) 2003-2006 Gabest
  * (C) 2006-2018 see Authors.txt
  *
@@ -10501,17 +10501,30 @@ CMainFrame::ChapterKind CMainFrame::ClassifyChapter(const CString& name)
 bool CMainFrame::AutoSkipChapters(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur)
 {
     const auto& s = AfxGetAppSettings();
-    if (!s.bAutoSkipChapters || !m_pCB || GetMediaState() != State_Running) {
+    if (!s.bAutoSkipChapters || GetMediaState() != State_Running) {
         return false;
     }
-    const DWORD count = m_pCB->ChapGetCount();
-    if (count < 2) {
-        return false;
-    }
+    const DWORD count = m_pCB ? m_pCB->ChapGetCount() : 0;
     const CString file = m_wndPlaylistBar.GetCurFileName();
     if (file != m_autoSkipFile) {
         m_autoSkipFile = file;
         m_autoSkippedChapters.clear();
+        m_fileHasSkipChapters = false;
+        for (DWORD i = 0; i < count; i++) {
+            REFERENCE_TIME rt = 0;
+            CComBSTR name;
+            if (SUCCEEDED(m_pCB->ChapGet(i, &rt, &name)) && name.Length() &&
+                    ClassifyChapter(CString(name.m_str)) != ChapterKind::Other) {
+                m_fileHasSkipChapters = true;
+                break;
+            }
+        }
+        if (!m_fileHasSkipChapters && !LoadAudioSkip(file)) {
+            StartIntroScan(file.Left(std::max(file.ReverseFind(L'\\'), file.ReverseFind(L'/'))));
+        }
+    }
+    if (!m_fileHasSkipChapters) {
+        return AutoSkipByAudio(rtNow, rtDur);
     }
 
     REFERENCE_TIME rtChap = rtNow;
@@ -10568,6 +10581,137 @@ bool CMainFrame::AutoSkipChapters(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur)
     return true;
 }
 
+// Same key as mpc-introscan: FNV-1a 64 of the lower-case folder path without a trailing slash
+CString CMainFrame::IntroScanCacheFile(CString folder)
+{
+    folder.TrimRight(L"\\/");
+    folder.MakeLower();
+    unsigned long long h = 1469598103934665603ull;
+    for (int i = 0; i < folder.GetLength(); i++) {
+        h ^= unsigned short(folder[i]);
+        h *= 1099511628211ull;
+    }
+    PWSTR base = nullptr;
+    CString path;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &base))) {
+        path.Format(L"%s\\MPC-HC-series-player\\skip\\%016llx.txt", base, h);
+        CoTaskMemFree(base);
+    }
+    return path;
+}
+
+bool CMainFrame::LoadAudioSkip(const CString& file)
+{
+    m_audioSkip = AudioSkipInfo();
+    const int slash = std::max(file.ReverseFind(L'\\'), file.ReverseFind(L'/'));
+    if (slash < 0) {
+        return false;
+    }
+    const CString cache = IntroScanCacheFile(file.Left(slash));
+    const CString name = file.Mid(slash + 1);
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    if (cache.IsEmpty() || !GetFileAttributesEx(file, GetFileExInfoStandard, &fa)) {
+        return false;
+    }
+    const unsigned long long size = (unsigned long long(fa.nFileSizeHigh) << 32) | fa.nFileSizeLow;
+    CStdioFile f;
+    if (!f.Open(cache, CFile::modeRead | CFile::typeBinary | CFile::shareDenyNone)) {
+        return false;
+    }
+    std::string data(size_t(f.GetLength()), '\0');
+    f.Read(data.data(), UINT(data.size()));
+    f.Close();
+    size_t pos = 0;
+    while (pos < data.size()) {
+        size_t eol = data.find('\n', pos);
+        if (eol == std::string::npos) {
+            eol = data.size();
+        }
+        const std::string line = data.substr(pos, eol - pos);
+        pos = eol + 1;
+        const size_t tab = line.find('\t');
+        if (tab == std::string::npos || CString(UTF8To16(line.substr(0, tab).c_str())).CompareNoCase(name) != 0) {
+            continue;
+        }
+        unsigned long long fsize = 0;
+        double v[5] = {};
+        if (sscanf_s(line.c_str() + tab + 1, "%llu\t%lf\t%lf\t%lf\t%lf\t%lf", &fsize, &v[0], &v[1], &v[2], &v[3], &v[4]) != 6 ||
+                fsize != size) {
+            return false;  // the file changed since the scan
+        }
+        m_audioSkip.found = true;
+        m_audioSkip.opening[0] = v[0];
+        m_audioSkip.opening[1] = v[1];
+        m_audioSkip.ending[0] = v[2];
+        m_audioSkip.ending[1] = v[3];
+        return true;
+    }
+    return false;
+}
+
+void CMainFrame::StartIntroScan(const CString& folder)
+{
+    CString folderPath(folder);
+    if (folder.IsEmpty() || PathUtils::IsURL(folderPath) || m_introScanFolders.count(folder) || m_hIntroScan) {
+        return;
+    }
+    m_introScanFolders.insert(folder);
+    const CString exe = PathUtils::CombinePaths(PathUtils::GetProgramPath(), L"mpc-introscan.exe");
+    if (!PathUtils::Exists(exe)) {
+        return;
+    }
+    CString cmd;
+    cmd.Format(L"\"%s\" \"%s\"", exe.GetString(), folder.GetString());
+    STARTUPINFO si = {sizeof(si)};
+    PROCESS_INFORMATION pi = {};
+    if (CreateProcess(nullptr, cmd.GetBuffer(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS,
+                      nullptr, nullptr, &si, &pi)) {
+        CloseHandle(pi.hThread);
+        m_hIntroScan = pi.hProcess;
+        m_introScanNextCheck = GetTickCount64() + 2000;
+    }
+    cmd.ReleaseBuffer();
+}
+
+// Opening/ending found by audio fingerprint: each is skipped once per file. When little more than the
+// next episode preview follows the ending, playback goes to the end so the next episode starts.
+bool CMainFrame::AutoSkipByAudio(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur)
+{
+    if (!m_audioSkip.found) {
+        if (!m_hIntroScan || GetTickCount64() < m_introScanNextCheck) {
+            return false;
+        }
+        m_introScanNextCheck = GetTickCount64() + 2000;
+        const bool finished = WaitForSingleObject(m_hIntroScan, 0) == WAIT_OBJECT_0;
+        if (finished) {
+            CloseHandle(m_hIntroScan);
+            m_hIntroScan = nullptr;
+        }
+        if (!LoadAudioSkip(m_autoSkipFile)) {
+            return false;
+        }
+    }
+    const double now = rtNow / 10000000.0, dur = rtDur / 10000000.0;
+    const auto inside = [now](const double seg[2]) { return seg[0] >= 0 && now >= seg[0] && now < seg[1] - 0.5; };
+    if (inside(m_audioSkip.opening) && !m_autoSkippedChapters.count(-1)) {
+        m_autoSkippedChapters.insert(-1);
+        SeekTo(REFERENCE_TIME(m_audioSkip.opening[1] * 10000000.0), false);
+        m_OSD.DisplayMessage(OSD_TOPLEFT, ResStr(IDS_AUTOSKIP_OPENING_DONE), 2000);
+        return true;
+    }
+    if (inside(m_audioSkip.ending) && !m_autoSkippedChapters.count(-2)) {
+        m_autoSkippedChapters.insert(-2);
+        REFERENCE_TIME target = REFERENCE_TIME(m_audioSkip.ending[1] * 10000000.0);
+        if (dur > 0 && dur - m_audioSkip.ending[1] < 30.0) {
+            target = rtDur - 10000;  // only the preview is left: finish, the next episode starts
+        }
+        SeekTo(target, false);
+        m_OSD.DisplayMessage(OSD_TOPLEFT, ResStr(IDS_AUTOSKIP_ENDING_DONE), 2000);
+        return true;
+    }
+    return false;
+}
+
 void CMainFrame::OnPlayAutoSkipChapters()
 {
     auto& s = AfxGetAppSettings();
@@ -10594,6 +10738,14 @@ void CMainFrame::OnPlaySkipOpening()
                 SeekTo(rtNext);
                 return;
             }
+        }
+    }
+
+    if (m_audioSkip.found && m_audioSkip.opening[0] >= 0) {
+        const double now = rtNow / 10000000.0;
+        if (m_audioSkip.opening[1] > now && m_audioSkip.opening[0] < now + 180) {
+            SeekTo(REFERENCE_TIME(m_audioSkip.opening[1] * 10000000.0));
+            return;
         }
     }
 
