@@ -31,6 +31,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
+#include <libavutil/pixdesc.h>
 #include <libswresample/swresample.h>
 }
 
@@ -208,6 +209,60 @@ std::optional<Segment> Shared(const std::vector<uint32_t>& a, const std::vector<
     return best;
 }
 
+// First hard scene cut in [from, to]: mean luma difference between consecutive frames (sampled on a
+// 64x36 grid) above a threshold. Fades and camera moves stay below it.
+std::optional<double> FindSceneCut(const std::string& path, double from, double to)
+{
+    std::optional<double> cut;
+    AVFormatContext* fmt = nullptr;
+    if (avformat_open_input(&fmt, path.c_str(), nullptr, nullptr) < 0) return cut;
+    if (avformat_find_stream_info(fmt, nullptr) < 0) { avformat_close_input(&fmt); return cut; }
+    const int si = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
+    AVStream* st = si >= 0 ? fmt->streams[si] : nullptr;
+    const AVCodec* codec = st ? avcodec_find_decoder(st->codecpar->codec_id) : nullptr;
+    AVCodecContext* dec = codec ? avcodec_alloc_context3(codec) : nullptr;
+    if (!dec || avcodec_parameters_to_context(dec, st->codecpar) < 0) { avcodec_free_context(&dec); avformat_close_input(&fmt); return cut; }
+    dec->thread_count = 0;
+    if (avcodec_open2(dec, codec, nullptr) < 0) { avcodec_free_context(&dec); avformat_close_input(&fmt); return cut; }
+    av_seek_frame(fmt, -1, int64_t(std::max(0.0, from - 0.5) * AV_TIME_BASE), AVSEEK_FLAG_BACKWARD);
+    AVPacket* pkt = av_packet_alloc();
+    AVFrame* frame = av_frame_alloc();
+    std::vector<int> prev, cur(64 * 36);
+    bool havePrev = false, done = false;
+    while (!done && av_read_frame(fmt, pkt) >= 0) {
+        if (pkt->stream_index == si && avcodec_send_packet(dec, pkt) >= 0) {
+            while (!done && avcodec_receive_frame(dec, frame) >= 0) {
+                const int64_t pts = frame->best_effort_timestamp;
+                const double t = pts != AV_NOPTS_VALUE ? pts * av_q2d(st->time_base) : 0;
+                if (t > to) { done = true; break; }
+                const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(AVPixelFormat(frame->format));
+                if (!desc || (desc->flags & AV_PIX_FMT_FLAG_RGB)) { done = true; break; }
+                const bool wide = desc->comp[0].depth > 8;
+                for (int y = 0; y < 36; y++) {
+                    const uint8_t* row = frame->data[0] + size_t(y * frame->height / 36) * frame->linesize[0];
+                    for (int x = 0; x < 64; x++) {
+                        const int px = x * frame->width / 64;
+                        cur[y * 64 + x] = wide ? (reinterpret_cast<const uint16_t*>(row)[px] >> (desc->comp[0].depth - 8)) : row[px];
+                    }
+                }
+                if (havePrev && t >= from) {
+                    long long sum = 0;
+                    for (size_t i = 0; i < cur.size(); i++) sum += std::abs(cur[i] - prev[i]);
+                    if (double(sum) / cur.size() > 22.0) { cut = t; done = true; break; }
+                }
+                prev = cur;
+                havePrev = true;
+            }
+        }
+        av_packet_unref(pkt);
+    }
+    av_frame_free(&frame);
+    av_packet_free(&pkt);
+    avcodec_free_context(&dec);
+    avformat_close_input(&fmt);
+    return cut;
+}
+
 struct Episode {
     std::wstring name;
     uint64_t size = 0;
@@ -306,7 +361,13 @@ int wmain(int argc, wchar_t** argv)
         auto op = Intersect(ops), ed = Intersect(eds);
         // Fingerprint windows smear the edges by up to ~2 s: shrink the segments so that no story is cut
         // (skipping a second less of the song is harmless, cutting a line of dialogue is not)
-        if (op) { op->first += 1.0; op->second -= 1.5; }
+        if (op) {
+            // The opening ends on a hard cut (last credit card -> story): snap to it when there is one
+            // close to the audio boundary, otherwise stay 1.5 s early
+            const auto snap = FindSceneCut(Utf8(folder + L"\\" + eps[k].name), op->second - 0.7, op->second + 2.0);
+            op->first += 1.0;
+            op->second = snap ? *snap : op->second - 1.5;
+        }
         if (ed) { ed->first += 2.0; ed->second -= 1.0; }
         char line[160];
         sprintf_s(line, "\t%llu\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n", (unsigned long long)eps[k].size,
