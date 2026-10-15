@@ -1060,6 +1060,7 @@
 #define ID_FILE_OPENDIRECTORY           33208
 #define ID_FILE_SHARE                   33466
 #define ID_PLAY_SKIP_OPENING            33467
+#define ID_PLAY_AUTOSKIP_CHAPTERS       33468
 #define IDS_MAINFRM_DIR_TITLE           33209
 #define IDS_MAINFRM_DIR_CHECK           33210
 #define IDS_AG_PAUSE                    33212
@@ -1903,13 +1904,15 @@
 #define IDS_MODERN_THEME_STYLE_WINDOWS10 58060
 #define IDS_MODERN_THEME_STYLE_WINDOWS11 58061
 #define IDS_AG_SKIP_OPENING             58062
+#define IDS_AUTOSKIP_OPENING_DONE       58063
+#define IDS_AUTOSKIP_ENDING_DONE        58064
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        20079
-#define _APS_NEXT_COMMAND_VALUE         33468
+#define _APS_NEXT_COMMAND_VALUE         33469
 #define _APS_NEXT_CONTROL_VALUE         22104
 #define _APS_NEXT_SYMED_VALUE           24052
 #endif

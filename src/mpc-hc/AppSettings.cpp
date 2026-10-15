@@ -78,6 +78,7 @@ CAppSettings::CAppSettings()
     , MRUDub(0, _T("Recent Dub List"), _T("Dub%d"), 20)
     , fRememberDVDPos(false)
     , fRememberFilePos(true)
+    , bAutoSkipChapters(true)
     , iRememberPosForLongerThan(5)
     , bRememberPosForAudioFiles(true)
     , bRememberExternalPlaylistPos(true)
@@ -1212,6 +1213,7 @@ void CAppSettings::SaveSettings(bool write_full_history /* = false */)
 
     pApp->WriteProfileInt(IDS_R_SETTINGS, IDS_RS_DVDPOS, fRememberDVDPos);
     pApp->WriteProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOS, fRememberFilePos);
+    pApp->WriteProfileInt(IDS_R_SETTINGS, IDS_RS_AUTOSKIP_CHAPTERS, bAutoSkipChapters);
     pApp->WriteProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOSLONGER, iRememberPosForLongerThan);
     pApp->WriteProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOSAUDIO, bRememberPosForAudioFiles);
     pApp->WriteProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOS_PLAYLIST, bRememberExternalPlaylistPos);
@@ -2273,6 +2275,7 @@ void CAppSettings::LoadSettings()
     // playback positions for last played files
     // series-player: resume where the viewer stopped is on by default
     fRememberFilePos = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOS, TRUE);
+    bAutoSkipChapters = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_AUTOSKIP_CHAPTERS, TRUE);
     iRememberPosForLongerThan = pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOSLONGER, 5);
     bRememberPosForAudioFiles = !!pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_FILEPOSAUDIO, TRUE);
     if (iRememberPosForLongerThan < 0) {

@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: MPC-HC\n"
-"POT-Creation-Date: 2026-10-11 10:32:51+0000\n"
+"POT-Creation-Date: 2026-10-15 14:17:35+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -543,6 +543,10 @@ msgstr ""
 
 msgctxt "ID_PLAY_SKIP_OPENING"
 msgid "Skip &Opening (+1:20)"
+msgstr ""
+
+msgctxt "ID_PLAY_AUTOSKIP_CHAPTERS"
+msgid "&Auto-skip Opening and Credits"
 msgstr ""
 
 msgctxt "POPUP"

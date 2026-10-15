@@ -44,6 +44,7 @@
 #define IDS_RS_FAV_REMEMBERABMARKS          _T("RememberABMarks")
 #define IDS_RS_DVDPOS                       _T("RememberDVDPos")
 #define IDS_RS_FILEPOS                      _T("RememberFilePos")
+#define IDS_RS_AUTOSKIP_CHAPTERS            _T("AutoSkipChapters")
 #define IDS_RS_FILEPOSLONGER                _T("RememberPosForLongerThan")
 #define IDS_RS_FILEPOSAUDIO                 _T("RememberPosForAudioFiles")
 #define IDS_RS_FILEPOS_PLAYLIST             _T("RememberExternalPlaylistPos")

@@ -1293,6 +1293,14 @@ public:
     afx_msg void OnPlaySeek(UINT nID);
     afx_msg void OnPlaySeekSet();
     afx_msg void OnPlaySkipOpening();
+    afx_msg void OnPlayAutoSkipChapters();
+    afx_msg void OnUpdatePlayAutoSkipChapters(CCmdUI* pCmdUI);
+    // series-player: automatic skipping of opening/ending chapters
+    enum class ChapterKind { Other, Opening, Ending };
+    static ChapterKind ClassifyChapter(const CString& name);
+    bool AutoSkipChapters(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur);
+    CString m_autoSkipFile;                       // file the skipped set below belongs to
+    std::set<REFERENCE_TIME> m_autoSkippedChapters; // chapter starts already skipped once
     afx_msg void OnPlaySeekKey(UINT nID); // no menu item
     afx_msg void OnUpdatePlaySeek(CCmdUI* pCmdUI);
     afx_msg void OnPlayChangeRate(UINT nID);

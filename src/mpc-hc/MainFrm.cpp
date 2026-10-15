@@ -654,6 +654,8 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
     ON_COMMAND(ID_FILE_SHARE, OnFileShare)
     ON_COMMAND(ID_PLAY_SKIP_OPENING, OnPlaySkipOpening)
     ON_UPDATE_COMMAND_UI(ID_PLAY_SKIP_OPENING, OnUpdatePlaySeek)
+    ON_COMMAND(ID_PLAY_AUTOSKIP_CHAPTERS, OnPlayAutoSkipChapters)
+    ON_UPDATE_COMMAND_UI(ID_PLAY_AUTOSKIP_CHAPTERS, OnUpdatePlayAutoSkipChapters)
     ON_UPDATE_COMMAND_UI(ID_FILE_SHARE, OnUpdateFileShare)
     ON_UPDATE_COMMAND_UI(ID_FILE_OPENDIRECTORY, OnUpdateFileOpen)
     ON_WM_POWERBROADCAST()
@@ -2459,6 +2461,10 @@ void CMainFrame::OnTimer(UINT_PTR nIDEvent)
 
                             if ((abRepeat.positionA && rtNow < abRepeat.positionA || abRepeat.positionB && rtNow >= abRepeat.positionB) && GetMediaState() != State_Stopped) {
                                 PerformABRepeat();
+                                return;
+                            }
+
+                            if (!abRepeat && AutoSkipChapters(rtNow, rtDur)) {
                                 return;
                             }
 
@@ -10442,10 +10448,144 @@ void CMainFrame::OnPlaySeek(UINT nID)
 }
 
 // series-player: jump over an anime opening (about 1:20) from the current position
+// Chapter names used for openings and endings in anime/TV releases ("Opening", "OP", "OP1", "Intro",
+// "Ending", "ED2", "End Credits", ...). Matching is by the first word, so "Opening Song" counts but
+// "Open Sea" or "Edward" do not.
+CMainFrame::ChapterKind CMainFrame::ClassifyChapter(const CString& name)
+{
+    CString s(name);
+    s.MakeLower();
+    std::vector<CString> words;
+    CString word;
+    for (int i = 0; i <= s.GetLength(); i++) {
+        const wchar_t c = i < s.GetLength() ? s[i] : L' ';
+        if (IsCharAlphaW(c)) {
+            word += c;
+        } else if (!word.IsEmpty()) {
+            words.push_back(word);
+            word.Empty();
+        }
+    }
+    if (words.empty()) {
+        return ChapterKind::Other;
+    }
+    static const wchar_t* const openings[] = {
+        L"opening", L"op", L"intro", L"\u043e\u043f\u0435\u043d\u0456\u043d\u0433", L"\u043e\u043f\u0435\u043d\u0438\u043d\u0433", L"\u0437\u0430\u0441\u0442\u0430\u0432\u043a\u0430"
+    };
+    static const wchar_t* const endings[] = {
+        L"ending", L"ed", L"outro", L"credits", L"\u0435\u043d\u0434\u0456\u043d\u0433", L"\u044d\u043d\u0434\u0438\u043d\u0433", L"\u0442\u0438\u0442\u0440\u0438", L"\u0442\u0438\u0442\u0440\u044b"
+    };
+    for (auto w : openings) {
+        if (words[0] == w) {
+            return ChapterKind::Opening;
+        }
+    }
+    for (auto w : endings) {
+        if (words[0] == w) {
+            return ChapterKind::Ending;
+        }
+    }
+    if (words[0] == L"end" && words.size() > 1 && words[1] == L"credits") {
+        return ChapterKind::Ending;
+    }
+    return ChapterKind::Other;
+}
+
+// Called from the position poller. Each opening/ending chapter is skipped once per file, so seeking
+// back into it on purpose plays it normally.
+bool CMainFrame::AutoSkipChapters(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur)
+{
+    const auto& s = AfxGetAppSettings();
+    if (!s.bAutoSkipChapters || !m_pCB || GetMediaState() != State_Running) {
+        return false;
+    }
+    const DWORD count = m_pCB->ChapGetCount();
+    if (count < 2) {
+        return false;
+    }
+    const CString file = m_wndPlaylistBar.GetCurFileName();
+    if (file != m_autoSkipFile) {
+        m_autoSkipFile = file;
+        m_autoSkippedChapters.clear();
+    }
+
+    REFERENCE_TIME rtChap = rtNow;
+    CComBSTR bstr;
+    const long i = m_pCB->ChapLookup(&rtChap, &bstr);
+    if (i < 0 || !bstr.Length()) {
+        return false;
+    }
+    const ChapterKind kind = ClassifyChapter(CString(bstr.m_str));
+    if (kind == ChapterKind::Other || m_autoSkippedChapters.count(rtChap)) {
+        return false;
+    }
+    m_autoSkippedChapters.insert(rtChap);
+
+    // Where the chapter ends: the next chapter's start, or the end of the file
+    REFERENCE_TIME rtNext = rtDur;
+    CComBSTR nextName;
+    const bool hasNext = DWORD(i + 1) < count && SUCCEEDED(m_pCB->ChapGet(i + 1, &rtNext, &nextName)) && rtNext > rtNow;
+    if (!hasNext) {
+        rtNext = rtDur;
+    }
+
+    if (kind == ChapterKind::Opening) {
+        if (!hasNext) {
+            return false;  // an "opening" that runs to the end of the file is not an opening
+        }
+        SeekTo(rtNext, false);
+        m_OSD.DisplayMessage(OSD_TOPLEFT, ResStr(IDS_AUTOSKIP_OPENING_DONE), 2000);
+        return true;
+    }
+
+    // Ending: keep a scene after the credits; a trailing "Preview" of the next episode is skipped too,
+    // and at the end of the file the after-playback action (next episode) takes over.
+    if (hasNext) {
+        CString next(nextName.m_str);
+        next.MakeLower();
+        if (next.Find(L"preview") == 0 || next.Find(L"\u0430\u043d\u043e\u043d\u0441") == 0) {
+            rtNext = rtDur;
+        }
+    }
+    if (rtNext >= rtDur && rtDur > 0) {
+        rtNext = rtDur - 10000;  // just before the end, so playback finishes normally
+    }
+    SeekTo(rtNext, false);
+    m_OSD.DisplayMessage(OSD_TOPLEFT, ResStr(IDS_AUTOSKIP_ENDING_DONE), 2000);
+    return true;
+}
+
+void CMainFrame::OnPlayAutoSkipChapters()
+{
+    auto& s = AfxGetAppSettings();
+    s.bAutoSkipChapters = !s.bAutoSkipChapters;  // saved with the other settings on exit
+}
+
+void CMainFrame::OnUpdatePlayAutoSkipChapters(CCmdUI* pCmdUI)
+{
+    pCmdUI->SetCheck(AfxGetAppSettings().bAutoSkipChapters);
+}
+
 void CMainFrame::OnPlaySkipOpening()
 {
+    // An "Opening" chapter that is playing or starts within the next 3 minutes: jump to its end
+    const REFERENCE_TIME rtNow = m_wndSeekBar.GetPos();
+    if (m_pCB) {
+        const DWORD count = m_pCB->ChapGetCount();
+        for (DWORD i = 0; i + 1 < count; i++) {
+            REFERENCE_TIME rtChap = 0, rtNext = 0;
+            CComBSTR bstr;
+            if (SUCCEEDED(m_pCB->ChapGet(i, &rtChap, &bstr)) && SUCCEEDED(m_pCB->ChapGet(i + 1, &rtNext, nullptr)) &&
+                    bstr.Length() && ClassifyChapter(CString(bstr.m_str)) == ChapterKind::Opening &&
+                    rtNext > rtNow && rtChap < rtNow + 180 * 10000000i64) {
+                SeekTo(rtNext);
+                return;
+            }
+        }
+    }
+
     constexpr REFERENCE_TIME rtOpening = 80 * 10000000i64;
-    REFERENCE_TIME rtSeekTo = m_wndSeekBar.GetPos() + rtOpening;
+    REFERENCE_TIME rtSeekTo = rtNow + rtOpening;
     REFERENCE_TIME rtStart = 0, rtStop = 0;
     m_wndSeekBar.GetRange(rtStart, rtStop);
     if (rtStop > 0 && rtSeekTo > rtStop) {

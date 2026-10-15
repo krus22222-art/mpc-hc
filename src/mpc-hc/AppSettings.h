@@ -618,6 +618,7 @@ public:
     CRecentFileAndURLList MRUDub;
     bool            fRememberDVDPos;
     bool            fRememberFilePos;
+    bool            bAutoSkipChapters;  // series-player: skip opening/ending chapters automatically
     int             iRememberPosForLongerThan;
     bool            bRememberPosForAudioFiles;
     bool            bRememberExternalPlaylistPos;

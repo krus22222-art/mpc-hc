@@ -550,6 +550,10 @@ msgctxt "ID_PLAY_SKIP_OPENING"
 msgid "Skip &Opening (+1:20)"
 msgstr "Пропустити &заставку (+1:20)"
 
+msgctxt "ID_PLAY_AUTOSKIP_CHAPTERS"
+msgid "&Auto-skip Opening and Credits"
+msgstr "Авто&пропуск заставки й титрів"
+
 msgctxt "POPUP"
 msgid "&Repeat"
 msgstr "&Повторювати"

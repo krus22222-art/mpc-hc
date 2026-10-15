@@ -1756,6 +1756,7 @@ BEGIN
         MENUITEM "&Stop",                       ID_PLAY_STOP
         MENUITEM "Fra&me Step",                 ID_PLAY_FRAMESTEP
         MENUITEM "Skip &Opening (+1:20)",       ID_PLAY_SKIP_OPENING
+        MENUITEM "&Auto-skip Opening and Credits", ID_PLAY_AUTOSKIP_CHAPTERS
         POPUP "&Repeat"
         BEGIN
             MENUITEM "F&orever",                    ID_PLAY_REPEAT_FOREVER
@@ -2302,6 +2303,7 @@ BEGIN
             MENUITEM "&Stop",                       ID_PLAY_STOP
             MENUITEM "Fra&me Step",                 ID_PLAY_FRAMESTEP
         MENUITEM "Skip &Opening (+1:20)",       ID_PLAY_SKIP_OPENING
+        MENUITEM "&Auto-skip Opening and Credits", ID_PLAY_AUTOSKIP_CHAPTERS
             POPUP "&Repeat"
             BEGIN
                 MENUITEM "F&orever",                    ID_PLAY_REPEAT_FOREVER
@@ -4361,6 +4363,8 @@ BEGIN
     IDS_MODERN_THEME_STYLE_WINDOWS10 "Windows 10"
     IDS_MODERN_THEME_STYLE_WINDOWS11 "Windows 11"
     IDS_AG_SKIP_OPENING     "Skip opening (+1:20)"
+    IDS_AUTOSKIP_OPENING_DONE "Opening skipped"
+    IDS_AUTOSKIP_ENDING_DONE "Credits skipped"
     IDS_AUDIO_BOOST_WARNING "WARNING: Boosting audio volume can in some situations have a negative effect on audio quality due to overflow.\n\nThere are two better and safer methods for increasing volume:\n1) Enabling mixing in the internal audio decoder settings.\nInternal Filters > Audio Decoder > Mixing\nThis is recommended if you have stereo speakers or headphones.\nTo increase loudness of voices, set center mix level to 1.0 in the mixing settings.\n2) Enable Normalize"
 END
 

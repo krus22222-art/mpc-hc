@@ -554,6 +554,10 @@ msgctxt "ID_PLAY_SKIP_OPENING"
 msgid "Skip &Opening (+1:20)"
 msgstr ""
 
+msgctxt "ID_PLAY_AUTOSKIP_CHAPTERS"
+msgid "&Auto-skip Opening and Credits"
+msgstr ""
+
 msgctxt "POPUP"
 msgid "&Repeat"
 msgstr "Repetir"
