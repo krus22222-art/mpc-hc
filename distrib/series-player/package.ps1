@@ -27,6 +27,11 @@ Copy-Item (Join-Path $bin 'Lang') (Join-Path $stage 'Lang') -Recurse
 New-Item -ItemType Directory (Join-Path $stage 'LAVFilters64') | Out-Null
 Get-ChildItem (Join-Path $bin 'LAVFilters64') -File | Where-Object { $_.Extension -in '.dll', '.ax', '.manifest' } |
     Copy-Item -Destination (Join-Path $stage 'LAVFilters64')
+# MPC Video Renderer (D3D11, RTX Video Super Resolution). Not built here: put the official release
+# (github.com/Aleksoid1978/VideoRenderer, checksum-verified) into bin\mpc-hc_x64\MPCVR.
+if (Test-Path (Join-Path $bin 'MPCVR\MpcVideoRenderer64.ax')) {
+    Copy-Item (Join-Path $bin 'MPCVR') (Join-Path $stage 'MPCVR') -Recurse
+} else { Write-Warning 'MPCVR not found: package without MPC Video Renderer' }
 
 # DirectX runtime parts MPC-HC ships with (renderer/shaders)
 Copy-Item (Join-Path $root 'distrib\x64\D3DCompiler_47.dll'), (Join-Path $root 'distrib\x64\D3DX9_43.dll') $stage
