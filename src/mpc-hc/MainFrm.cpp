@@ -10488,6 +10488,11 @@ CMainFrame::ChapterKind CMainFrame::ClassifyChapter(const CString& name)
     if (words[0] == L"end" && words.size() > 1 && words[1] == L"credits") {
         return ChapterKind::Ending;
     }
+    // The next episode preview is skipped like the credits
+    if (words[0] == L"preview" || words[0] == L"анонс" ||
+            (words[0] == L"next" && words.size() > 1 && words[1] == L"episode")) {
+        return ChapterKind::Ending;
+    }
     return ChapterKind::Other;
 }
 
@@ -10538,14 +10543,22 @@ bool CMainFrame::AutoSkipChapters(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur)
         return true;
     }
 
-    // Ending: keep a scene after the credits; a trailing "Preview" of the next episode is skipped too,
-    // and at the end of the file the after-playback action (next episode) takes over.
-    if (hasNext) {
-        CString next(nextName.m_str);
-        next.MakeLower();
-        if (next.Find(L"preview") == 0 || next.Find(L"\u0430\u043d\u043e\u043d\u0441") == 0) {
-            rtNext = rtDur;
+    // Ending/preview: skipped to the next chapter, so a scene after the credits plays (a following
+    // preview is an Ending-kind chapter itself and gets skipped in turn); when nothing follows,
+    // playback goes to the end of the file and the after-playback action starts the next episode.
+    // Consecutive ending-kind chapters (credits, then preview) are jumped over in one go.
+    for (DWORD j = DWORD(i) + 1; hasNext && j < count; j++) {
+        REFERENCE_TIME rtStart = 0, rtAfter = rtDur;
+        CComBSTR name;
+        if (FAILED(m_pCB->ChapGet(j, &rtStart, &name)) || !name.Length() ||
+                ClassifyChapter(CString(name.m_str)) != ChapterKind::Ending) {
+            break;
         }
+        m_autoSkippedChapters.insert(rtStart);
+        if (j + 1 >= count || FAILED(m_pCB->ChapGet(j + 1, &rtAfter, nullptr))) {
+            rtAfter = rtDur;
+        }
+        rtNext = rtAfter;
     }
     if (rtNext >= rtDur && rtDur > 0) {
         rtNext = rtDur - 10000;  // just before the end, so playback finishes normally
